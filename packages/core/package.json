@@ -1,11 +1,14 @@
 {
   "name": "@arinc/core",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",
     "./schema": "./src/schema/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "test": "node --test test/**/*.test.js",

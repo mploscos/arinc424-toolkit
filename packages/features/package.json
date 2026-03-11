@@ -1,6 +1,6 @@
 {
   "name": "@arinc/features",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -8,7 +8,10 @@
     "./schema": "./src/schema/index.js"
   },
   "dependencies": {
-    "@arinc/core": "1.0.0"
+    "@arinc/core": "0.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "test": "node --test test/**/*.test.js",

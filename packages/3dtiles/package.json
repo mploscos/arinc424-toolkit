@@ -1,14 +1,17 @@
 {
   "name": "@arinc/3dtiles",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js"
   },
   "dependencies": {
-    "@arinc/features": "1.0.0",
+    "@arinc/features": "0.1.0",
     "earcut": "^3.0.2"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "test": "node --test test/**/*.test.js",

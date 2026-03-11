@@ -2,3 +2,4 @@ node_modules/
 .DS_Store
 artifacts/
 data/*.dat
+.npm-cache/
