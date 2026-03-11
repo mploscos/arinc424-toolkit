@@ -1,0 +1,13 @@
+{
+  "schema": "arinc-tiles-manifest",
+  "schemaVersion": "1.0.0",
+  "generatedAt": null,
+  "minZoom": 4,
+  "maxZoom": 10,
+  "tileCount": 18,
+  "layers": [
+    "airspaces"
+  ],
+  "simplify": false,
+  "simplifyTolerance": null
+}

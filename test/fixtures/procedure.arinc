@@ -1,0 +1,6 @@
+HDR FAACIFP PROCEDURE
+S   P KPRCUSA                   N40300000W073000000     00020                                Procedure Intl                         
+S   EAK2  US PRC1         WPTE  N40350000W072500000                                               PROC FIX 1                        
+S   EAK2  US PRC2         WPTE  N40400000W072000000                                               PROC FIX 2                        
+S   P KPRCUSDPRC1  1RW04  001PRC1 USEA1    R   TF                                   0500009000     250                              
+S   P KPRCUSDPRC1  1RW04  002PRC2 USEA1    R   TF                                   0500009000     250                              

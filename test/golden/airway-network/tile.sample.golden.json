@@ -1,0 +1,42 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "navaid:D:US:DPK",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.46666666666667,
+          40.78333333333333
+        ]
+      },
+      "properties": {
+        "id": "navaid:D:US:DPK",
+        "type": "navaid",
+        "name": "DEER PARK",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "D",
+            "lineNumber": 5,
+            "rawLine": "S   D     US DPK      11790V TACN40470000W073280000                       W0100              DEER PARK                              ",
+            "entityType": "navaids",
+            "entityId": "navaid:D:US:DPK"
+          }
+        ],
+        "country": "US",
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "navaid",
+          "entityId": "navaid:D:US:DPK"
+        },
+        "ident": "DPK",
+        "navaidType": "VHF",
+        "frequency": "11790",
+        "layer": "navaids"
+      }
+    }
+  ]
+}

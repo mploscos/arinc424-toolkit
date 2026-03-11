@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://schemas.arinc.dev/feature-model/1.0.0/properties.heliports.schema.json","allOf":[{"$ref":"./base-properties.schema.json"},{"type":"object","required":["type","ident"],"properties":{"type":{"const":"heliport"},"ident":{"type":"string"}}}],"unevaluatedProperties":false}

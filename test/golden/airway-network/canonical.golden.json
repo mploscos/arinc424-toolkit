@@ -1,0 +1,183 @@
+{
+  "schema": "navdata-canonical",
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "datasetId": null,
+    "source": "FAA-CIFP",
+    "inputFile": null,
+    "effectiveFrom": null,
+    "effectiveTo": null,
+    "generatedAt": null
+  },
+  "entities": {
+    "airports": [],
+    "heliports": [],
+    "runways": [],
+    "waypoints": [
+      {
+        "id": "waypoint:EA:US:K2:DIXIE",
+        "type": "waypoint",
+        "ident": "DIXIE",
+        "region": "K2",
+        "icao": "US",
+        "usage": "E",
+        "waypointType": "WPT",
+        "name": "DIXIE",
+        "coord": [
+          -73.16666666666667,
+          40.666666666666664
+        ],
+        "sourceRefs": [
+          {
+            "recordType": "EA",
+            "lineNumber": 2,
+            "rawLine": "S   EAK2  US DIXIE        WPTE  N40400000W073100000                                               DIXIE                             ",
+            "entityType": "waypoints",
+            "entityId": "waypoint:EA:US:K2:DIXIE"
+          }
+        ]
+      },
+      {
+        "id": "waypoint:EA:US:K2:HFD",
+        "type": "waypoint",
+        "ident": "HFD",
+        "region": "K2",
+        "icao": "US",
+        "usage": "E",
+        "waypointType": "WPT",
+        "name": "HFD",
+        "coord": [
+          -72.66666666666667,
+          41.583333333333336
+        ],
+        "sourceRefs": [
+          {
+            "recordType": "EA",
+            "lineNumber": 4,
+            "rawLine": "S   EAK2  US HFD          WPTE  N41350000W072400000                                               HFD                               ",
+            "entityType": "waypoints",
+            "entityId": "waypoint:EA:US:K2:HFD"
+          }
+        ]
+      },
+      {
+        "id": "waypoint:EA:US:K2:MERIT",
+        "type": "waypoint",
+        "ident": "MERIT",
+        "region": "K2",
+        "icao": "US",
+        "usage": "E",
+        "waypointType": "WPT",
+        "name": "MERIT",
+        "coord": [
+          -72,
+          41
+        ],
+        "sourceRefs": [
+          {
+            "recordType": "EA",
+            "lineNumber": 3,
+            "rawLine": "S   EAK2  US MERIT        WPTE  N41000000W072000000                                               MERIT                             ",
+            "entityType": "waypoints",
+            "entityId": "waypoint:EA:US:K2:MERIT"
+          }
+        ]
+      }
+    ],
+    "navaids": [
+      {
+        "id": "navaid:D:US:DPK",
+        "type": "navaid",
+        "navaidType": "VHF",
+        "ident": "DPK",
+        "icao": "US",
+        "name": "DEER PARK",
+        "frequency": "11790",
+        "class": "V",
+        "magVarDeg": -10,
+        "coord": [
+          -73.46666666666667,
+          40.78333333333333
+        ],
+        "sourceRefs": [
+          {
+            "recordType": "D",
+            "lineNumber": 5,
+            "rawLine": "S   D     US DPK      11790V TACN40470000W073280000                       W0100              DEER PARK                              ",
+            "entityType": "navaids",
+            "entityId": "navaid:D:US:DPK"
+          }
+        ]
+      }
+    ],
+    "airways": [
+      {
+        "id": "airway:J75:US:J:L",
+        "type": "airway",
+        "airwayName": "J75",
+        "airwayType": "J",
+        "level": "L",
+        "refs": {
+          "segmentFixIds": [
+            "waypoint:EA:US:K2:DIXIE",
+            "waypoint:EA:US:K2:MERIT",
+            "waypoint:EA:US:K2:HFD"
+          ],
+          "segmentFixRaw": [
+            "DIXIE",
+            "MERIT",
+            "HFD"
+          ]
+        },
+        "coordinates": [
+          [
+            -73.16666666666667,
+            40.666666666666664
+          ],
+          [
+            -72,
+            41
+          ],
+          [
+            -72.66666666666667,
+            41.583333333333336
+          ]
+        ],
+        "bbox": [
+          -73.16666666666667,
+          40.666666666666664,
+          -72,
+          41.583333333333336
+        ],
+        "minAltitudeM": 1524,
+        "maxAltitudeM": 5486.400000000001,
+        "sourceRefs": [
+          {
+            "recordType": "ER",
+            "lineNumber": 6,
+            "rawLine": "S   ER       J75         0001DIXIEUSEA1     JL                                     05000     18000                                  ",
+            "entityType": "airways",
+            "entityId": "airway:J75:US:J:L"
+          },
+          {
+            "recordType": "ER",
+            "lineNumber": 7,
+            "rawLine": "S   ER       J75         0002MERITUSEA1     JL                                     05000     18000                                  ",
+            "entityType": "airways",
+            "entityId": "airway:J75:US:J:L"
+          },
+          {
+            "recordType": "ER",
+            "lineNumber": 8,
+            "rawLine": "S   ER       J75         0003HFD  USEA1     JL                                     05000     18000                                  ",
+            "entityType": "airways",
+            "entityId": "airway:J75:US:J:L"
+          }
+        ]
+      }
+    ],
+    "airspaces": [],
+    "procedures": [],
+    "holds": []
+  }
+}

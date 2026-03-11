@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.arinc.dev/feature-model/1.0.0/feature.discriminator.schema.json",
+  "allOf": [
+    { "$ref": "./feature.base.schema.json" },
+    {
+      "oneOf": [
+        { "properties": { "layer": { "const": "airports" }, "properties": { "allOf": [{ "$ref": "./properties.airports.schema.json" }, { "properties": { "type": { "const": "airport" } }, "required": ["type"] }] }, "geometry": { "properties": { "type": { "const": "Point" } } } } },
+        { "properties": { "layer": { "const": "heliports" }, "properties": { "allOf": [{ "$ref": "./properties.heliports.schema.json" }, { "properties": { "type": { "const": "heliport" } }, "required": ["type"] }] }, "geometry": { "properties": { "type": { "const": "Point" } } } } },
+        { "properties": { "layer": { "const": "runways" }, "properties": { "allOf": [{ "$ref": "./properties.runways.schema.json" }, { "properties": { "type": { "const": "runway" } }, "required": ["type"] }] }, "geometry": { "properties": { "type": { "enum": ["Point", "LineString"] } } } } },
+        { "properties": { "layer": { "const": "waypoints" }, "properties": { "allOf": [{ "$ref": "./properties.waypoints.schema.json" }, { "properties": { "type": { "const": "waypoint" } }, "required": ["type"] }] }, "geometry": { "properties": { "type": { "const": "Point" } } } } },
+        { "properties": { "layer": { "const": "navaids" }, "properties": { "allOf": [{ "$ref": "./properties.navaids.schema.json" }, { "properties": { "type": { "const": "navaid" } }, "required": ["type"] }] }, "geometry": { "properties": { "type": { "const": "Point" } } } } },
+        { "properties": { "layer": { "const": "airways" }, "properties": { "allOf": [{ "$ref": "./properties.airways.schema.json" }, { "properties": { "type": { "const": "airway" } }, "required": ["type"] }] }, "geometry": { "properties": { "type": { "const": "LineString" } } } } },
+        { "properties": { "layer": { "const": "airspaces" }, "properties": { "allOf": [{ "$ref": "./properties.airspaces.schema.json" }, { "properties": { "type": { "const": "airspace" } }, "required": ["type"] }] }, "geometry": { "properties": { "type": { "enum": ["Polygon", "MultiPolygon"] } } } } },
+        { "properties": { "layer": { "const": "procedures" }, "properties": { "allOf": [{ "$ref": "./properties.procedures.schema.json" }, { "properties": { "type": { "const": "procedure" } }, "required": ["type"] }] }, "geometry": { "properties": { "type": { "const": "LineString" } } } } },
+        { "properties": { "layer": { "const": "holds" }, "properties": { "allOf": [{ "$ref": "./properties.holds.schema.json" }, { "properties": { "type": { "const": "hold" } }, "required": ["type"] }] }, "geometry": { "properties": { "type": { "enum": ["LineString", "Polygon"] } } } } }
+      ]
+    }
+  ]
+}

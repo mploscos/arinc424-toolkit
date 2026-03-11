@@ -1,0 +1,41 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.76666666666667,
+          40.75
+        ]
+      },
+      "properties": {
+        "id": "airport:US:KMIN",
+        "type": "airport",
+        "name": "Minimal Intl",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "PA",
+            "lineNumber": 2,
+            "rawLine": "S   P KMINUSA                   N40450000W073460000     00010                                Minimal Intl                           ",
+            "entityType": "airports",
+            "entityId": "airport:US:KMIN"
+          }
+        ],
+        "country": "US",
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "airport",
+          "entityId": "airport:US:KMIN"
+        },
+        "icao": "US",
+        "ident": "KMIN",
+        "elevationM": 3.048
+      },
+      "id": "airport:US:KMIN"
+    }
+  ]
+}

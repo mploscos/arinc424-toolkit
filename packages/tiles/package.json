@@ -1,0 +1,17 @@
+{
+  "name": "@arinc/tiles",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "dependencies": {
+    "@arinc/features": "1.0.0"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "test:golden": "node --test test/**/*golden*.test.js",
+    "bench": "node bench/tiles.bench.js"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.arinc.dev/canonical/1.0.0/navdata-canonical.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "metadata", "entities"],
+  "properties": {
+    "schema": { "const": "navdata-canonical" },
+    "schemaVersion": { "const": "1.0.0" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["source", "generatedAt"],
+      "properties": {
+        "datasetId": { "type": ["string", "null"] },
+        "source": { "type": ["string", "null"] },
+        "inputFile": { "type": ["string", "null"] },
+        "effectiveFrom": { "type": ["string", "null"] },
+        "effectiveTo": { "type": ["string", "null"] },
+        "generatedAt": { "type": ["string", "null"] }
+      }
+    },
+    "entities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["airports", "heliports", "runways", "waypoints", "navaids", "airways", "airspaces", "procedures", "holds"],
+      "properties": {
+        "airports": { "type": "array", "items": { "$ref": "#/$defs/entityBase" } },
+        "heliports": { "type": "array", "items": { "$ref": "#/$defs/entityBase" } },
+        "runways": { "type": "array", "items": { "$ref": "#/$defs/entityBase" } },
+        "waypoints": { "type": "array", "items": { "$ref": "#/$defs/entityBase" } },
+        "navaids": { "type": "array", "items": { "$ref": "#/$defs/entityBase" } },
+        "airways": { "type": "array", "items": { "$ref": "#/$defs/entityBase" } },
+        "airspaces": { "type": "array", "items": { "$ref": "#/$defs/entityBase" } },
+        "procedures": { "type": "array", "items": { "$ref": "#/$defs/entityBase" } },
+        "holds": { "type": "array", "items": { "$ref": "#/$defs/entityBase" } }
+      }
+    }
+  },
+  "$defs": {
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["recordType", "lineNumber", "entityType", "entityId"],
+      "properties": {
+        "recordType": { "type": "string" },
+        "lineNumber": { "type": "integer", "minimum": 1 },
+        "entityType": { "type": "string" },
+        "entityId": { "type": "string" },
+        "rawLine": { "type": "string" }
+      }
+    },
+    "entityBase": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "type", "sourceRefs"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "sourceRefs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/sourceRef" }
+        },
+        "refs": { "type": "object" }
+      }
+    }
+  }
+}

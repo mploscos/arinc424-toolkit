@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.arinc.dev/feature-model/1.0.0/feature.base.schema.json",
+  "type": "object",
+  "required": [
+    "id",
+    "layer",
+    "geometry",
+    "properties",
+    "bbox"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "layer": {
+      "type": "string",
+      "enum": [
+        "airports",
+        "heliports",
+        "runways",
+        "waypoints",
+        "navaids",
+        "airways",
+        "airspaces",
+        "procedures",
+        "holds"
+      ]
+    },
+    "geometry": {
+      "type": "object",
+      "required": [
+        "type",
+        "coordinates"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "Point",
+            "LineString",
+            "Polygon",
+            "MultiPolygon"
+          ]
+        },
+        "coordinates": {}
+      },
+      "additionalProperties": false
+    },
+    "properties": {
+      "type": "object"
+    },
+    "bbox": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "minZoom": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 24
+    },
+    "maxZoom": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 24
+    },
+    "sourceRefs": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}

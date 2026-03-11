@@ -1,0 +1,41 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73,
+          40.5
+        ]
+      },
+      "properties": {
+        "id": "airport:US:KPRC",
+        "type": "airport",
+        "name": "Procedure Intl",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "PA",
+            "lineNumber": 2,
+            "rawLine": "S   P KPRCUSA                   N40300000W073000000     00020                                Procedure Intl                         ",
+            "entityType": "airports",
+            "entityId": "airport:US:KPRC"
+          }
+        ],
+        "country": "US",
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "airport",
+          "entityId": "airport:US:KPRC"
+        },
+        "icao": "US",
+        "ident": "KPRC",
+        "elevationM": 6.096
+      },
+      "id": "airport:US:KPRC"
+    }
+  ]
+}

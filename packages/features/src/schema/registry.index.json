@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "canonical": "https://schemas.arinc.dev/canonical/1.0.0/navdata-canonical.schema.json",
+  "featureBase": "https://schemas.arinc.dev/feature-model/1.0.0/feature.base.schema.json",
+  "featureDiscriminator": "https://schemas.arinc.dev/feature-model/1.0.0/feature.discriminator.schema.json",
+  "layerProperties": {
+    "airports": "https://schemas.arinc.dev/feature-model/1.0.0/properties.airports.schema.json",
+    "heliports": "https://schemas.arinc.dev/feature-model/1.0.0/properties.heliports.schema.json",
+    "runways": "https://schemas.arinc.dev/feature-model/1.0.0/properties.runways.schema.json",
+    "waypoints": "https://schemas.arinc.dev/feature-model/1.0.0/properties.waypoints.schema.json",
+    "navaids": "https://schemas.arinc.dev/feature-model/1.0.0/properties.navaids.schema.json",
+    "airways": "https://schemas.arinc.dev/feature-model/1.0.0/properties.airways.schema.json",
+    "airspaces": "https://schemas.arinc.dev/feature-model/1.0.0/properties.airspaces.schema.json",
+    "procedures": "https://schemas.arinc.dev/feature-model/1.0.0/properties.procedures.schema.json",
+    "holds": "https://schemas.arinc.dev/feature-model/1.0.0/properties.holds.schema.json"
+  }
+}

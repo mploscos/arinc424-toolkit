@@ -1,0 +1,312 @@
+{
+  "schema": "arinc-feature-model",
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "generatedAt": null,
+    "source": "FAA-CIFP"
+  },
+  "features": [
+    {
+      "id": "airway:J75:US:J:L",
+      "layer": "airways",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.16666666666667,
+            40.666666666666664
+          ],
+          [
+            -72,
+            41
+          ],
+          [
+            -72.66666666666667,
+            41.583333333333336
+          ]
+        ]
+      },
+      "properties": {
+        "id": "airway:J75:US:J:L",
+        "type": "airway",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "ER",
+            "lineNumber": 6,
+            "rawLine": "S   ER       J75         0001DIXIEUSEA1     JL                                     05000     18000                                  ",
+            "entityType": "airways",
+            "entityId": "airway:J75:US:J:L"
+          },
+          {
+            "recordType": "ER",
+            "lineNumber": 7,
+            "rawLine": "S   ER       J75         0002MERITUSEA1     JL                                     05000     18000                                  ",
+            "entityType": "airways",
+            "entityId": "airway:J75:US:J:L"
+          },
+          {
+            "recordType": "ER",
+            "lineNumber": 8,
+            "rawLine": "S   ER       J75         0003HFD  USEA1     JL                                     05000     18000                                  ",
+            "entityType": "airways",
+            "entityId": "airway:J75:US:J:L"
+          }
+        ],
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "airway",
+          "entityId": "airway:J75:US:J:L"
+        },
+        "airwayName": "J75",
+        "airwayType": "J",
+        "upperLower": "L",
+        "segmentOrder": 0
+      },
+      "bbox": [
+        -73.16666666666667,
+        40.666666666666664,
+        -72,
+        41.583333333333336
+      ],
+      "minZoom": 7,
+      "maxZoom": 12,
+      "sourceRefs": [
+        {
+          "recordType": "ER",
+          "lineNumber": 6,
+          "rawLine": "S   ER       J75         0001DIXIEUSEA1     JL                                     05000     18000                                  ",
+          "entityType": "airways",
+          "entityId": "airway:J75:US:J:L"
+        },
+        {
+          "recordType": "ER",
+          "lineNumber": 7,
+          "rawLine": "S   ER       J75         0002MERITUSEA1     JL                                     05000     18000                                  ",
+          "entityType": "airways",
+          "entityId": "airway:J75:US:J:L"
+        },
+        {
+          "recordType": "ER",
+          "lineNumber": 8,
+          "rawLine": "S   ER       J75         0003HFD  USEA1     JL                                     05000     18000                                  ",
+          "entityType": "airways",
+          "entityId": "airway:J75:US:J:L"
+        }
+      ]
+    },
+    {
+      "id": "navaid:D:US:DPK",
+      "layer": "navaids",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.46666666666667,
+          40.78333333333333
+        ]
+      },
+      "properties": {
+        "id": "navaid:D:US:DPK",
+        "type": "navaid",
+        "name": "DEER PARK",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "D",
+            "lineNumber": 5,
+            "rawLine": "S   D     US DPK      11790V TACN40470000W073280000                       W0100              DEER PARK                              ",
+            "entityType": "navaids",
+            "entityId": "navaid:D:US:DPK"
+          }
+        ],
+        "country": "US",
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "navaid",
+          "entityId": "navaid:D:US:DPK"
+        },
+        "ident": "DPK",
+        "navaidType": "VHF",
+        "frequency": "11790"
+      },
+      "bbox": [
+        -73.46666666666667,
+        40.78333333333333,
+        -73.46666666666667,
+        40.78333333333333
+      ],
+      "minZoom": 8,
+      "maxZoom": 14,
+      "sourceRefs": [
+        {
+          "recordType": "D",
+          "lineNumber": 5,
+          "rawLine": "S   D     US DPK      11790V TACN40470000W073280000                       W0100              DEER PARK                              ",
+          "entityType": "navaids",
+          "entityId": "navaid:D:US:DPK"
+        }
+      ]
+    },
+    {
+      "id": "waypoint:EA:US:K2:DIXIE",
+      "layer": "waypoints",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.16666666666667,
+          40.666666666666664
+        ]
+      },
+      "properties": {
+        "id": "waypoint:EA:US:K2:DIXIE",
+        "type": "waypoint",
+        "name": "DIXIE",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "EA",
+            "lineNumber": 2,
+            "rawLine": "S   EAK2  US DIXIE        WPTE  N40400000W073100000                                               DIXIE                             ",
+            "entityType": "waypoints",
+            "entityId": "waypoint:EA:US:K2:DIXIE"
+          }
+        ],
+        "country": "US",
+        "region": "K2",
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "waypoint",
+          "entityId": "waypoint:EA:US:K2:DIXIE"
+        },
+        "ident": "DIXIE",
+        "usage": "E"
+      },
+      "bbox": [
+        -73.16666666666667,
+        40.666666666666664,
+        -73.16666666666667,
+        40.666666666666664
+      ],
+      "minZoom": 9,
+      "maxZoom": 14,
+      "sourceRefs": [
+        {
+          "recordType": "EA",
+          "lineNumber": 2,
+          "rawLine": "S   EAK2  US DIXIE        WPTE  N40400000W073100000                                               DIXIE                             ",
+          "entityType": "waypoints",
+          "entityId": "waypoint:EA:US:K2:DIXIE"
+        }
+      ]
+    },
+    {
+      "id": "waypoint:EA:US:K2:HFD",
+      "layer": "waypoints",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -72.66666666666667,
+          41.583333333333336
+        ]
+      },
+      "properties": {
+        "id": "waypoint:EA:US:K2:HFD",
+        "type": "waypoint",
+        "name": "HFD",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "EA",
+            "lineNumber": 4,
+            "rawLine": "S   EAK2  US HFD          WPTE  N41350000W072400000                                               HFD                               ",
+            "entityType": "waypoints",
+            "entityId": "waypoint:EA:US:K2:HFD"
+          }
+        ],
+        "country": "US",
+        "region": "K2",
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "waypoint",
+          "entityId": "waypoint:EA:US:K2:HFD"
+        },
+        "ident": "HFD",
+        "usage": "E"
+      },
+      "bbox": [
+        -72.66666666666667,
+        41.583333333333336,
+        -72.66666666666667,
+        41.583333333333336
+      ],
+      "minZoom": 9,
+      "maxZoom": 14,
+      "sourceRefs": [
+        {
+          "recordType": "EA",
+          "lineNumber": 4,
+          "rawLine": "S   EAK2  US HFD          WPTE  N41350000W072400000                                               HFD                               ",
+          "entityType": "waypoints",
+          "entityId": "waypoint:EA:US:K2:HFD"
+        }
+      ]
+    },
+    {
+      "id": "waypoint:EA:US:K2:MERIT",
+      "layer": "waypoints",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -72,
+          41
+        ]
+      },
+      "properties": {
+        "id": "waypoint:EA:US:K2:MERIT",
+        "type": "waypoint",
+        "name": "MERIT",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "EA",
+            "lineNumber": 3,
+            "rawLine": "S   EAK2  US MERIT        WPTE  N41000000W072000000                                               MERIT                             ",
+            "entityType": "waypoints",
+            "entityId": "waypoint:EA:US:K2:MERIT"
+          }
+        ],
+        "country": "US",
+        "region": "K2",
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "waypoint",
+          "entityId": "waypoint:EA:US:K2:MERIT"
+        },
+        "ident": "MERIT",
+        "usage": "E"
+      },
+      "bbox": [
+        -72,
+        41,
+        -72,
+        41
+      ],
+      "minZoom": 9,
+      "maxZoom": 14,
+      "sourceRefs": [
+        {
+          "recordType": "EA",
+          "lineNumber": 3,
+          "rawLine": "S   EAK2  US MERIT        WPTE  N41000000W072000000                                               MERIT                             ",
+          "entityType": "waypoints",
+          "entityId": "waypoint:EA:US:K2:MERIT"
+        }
+      ]
+    }
+  ]
+}

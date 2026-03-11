@@ -1,0 +1,145 @@
+{
+  "schema": "navdata-canonical",
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "datasetId": null,
+    "source": "FAA-CIFP",
+    "inputFile": null,
+    "effectiveFrom": null,
+    "effectiveTo": null,
+    "generatedAt": null
+  },
+  "entities": {
+    "airports": [
+      {
+        "id": "airport:US:KJFK",
+        "type": "airport",
+        "ident": "KJFK",
+        "icao": "US",
+        "name": "John F Kennedy Intl",
+        "iata": null,
+        "coord": [
+          -73.76666666666667,
+          40.75
+        ],
+        "elevationM": null,
+        "sourceRefs": [
+          {
+            "recordType": "PA",
+            "lineNumber": 2,
+            "rawLine": "S   P KJFKUSA                   N40450000W073460000                                          John F Kennedy Intl                  ",
+            "entityType": "airports",
+            "entityId": "airport:US:KJFK"
+          }
+        ]
+      }
+    ],
+    "heliports": [],
+    "runways": [],
+    "waypoints": [
+      {
+        "id": "waypoint:EA:US:K2:DIXIE",
+        "type": "waypoint",
+        "ident": "DIXIE",
+        "region": "K2",
+        "icao": "US",
+        "usage": null,
+        "waypointType": null,
+        "name": null,
+        "coord": [
+          -73.16666666666667,
+          40.666666666666664
+        ],
+        "sourceRefs": [
+          {
+            "recordType": "EA",
+            "lineNumber": 3,
+            "rawLine": "S   EAK2  US DIXIE              N40400000W073100000                                                                               ",
+            "entityType": "waypoints",
+            "entityId": "waypoint:EA:US:K2:DIXIE"
+          }
+        ]
+      },
+      {
+        "id": "waypoint:EA:US:K2:MERIT",
+        "type": "waypoint",
+        "ident": "MERIT",
+        "region": "K2",
+        "icao": "US",
+        "usage": null,
+        "waypointType": null,
+        "name": null,
+        "coord": [
+          -72,
+          41
+        ],
+        "sourceRefs": [
+          {
+            "recordType": "EA",
+            "lineNumber": 4,
+            "rawLine": "S   EAK2  US MERIT              N41000000W072000000                                                                               ",
+            "entityType": "waypoints",
+            "entityId": "waypoint:EA:US:K2:MERIT"
+          }
+        ]
+      }
+    ],
+    "navaids": [],
+    "airways": [
+      {
+        "id": "airway:J75:US:J:L",
+        "type": "airway",
+        "airwayName": "J75",
+        "airwayType": "J",
+        "level": "L",
+        "refs": {
+          "segmentFixIds": [
+            "waypoint:EA:US:K2:DIXIE",
+            "waypoint:EA:US:K2:MERIT"
+          ],
+          "segmentFixRaw": [
+            "DIXIE",
+            "MERIT"
+          ]
+        },
+        "coordinates": [
+          [
+            -73.16666666666667,
+            40.666666666666664
+          ],
+          [
+            -72,
+            41
+          ]
+        ],
+        "bbox": [
+          -73.16666666666667,
+          40.666666666666664,
+          -72,
+          41
+        ],
+        "minAltitudeM": null,
+        "maxAltitudeM": null,
+        "sourceRefs": [
+          {
+            "recordType": "ER",
+            "lineNumber": 5,
+            "rawLine": "S   ER       J75         0001DIXIEUS  0     JL                                                                                    ",
+            "entityType": "airways",
+            "entityId": "airway:J75:US:J:L"
+          },
+          {
+            "recordType": "ER",
+            "lineNumber": 6,
+            "rawLine": "S   ER       J75         0002MERITUS  0     JL                                                                                    ",
+            "entityType": "airways",
+            "entityId": "airway:J75:US:J:L"
+          }
+        ]
+      }
+    ],
+    "airspaces": [],
+    "procedures": [],
+    "holds": []
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.arinc.dev/feature-model/1.0.0/base-properties.schema.json",
+  "type": "object",
+  "required": ["id", "type", "source", "sourceRefs", "createdFrom"],
+  "properties": {
+    "id": { "type": "string" },
+    "type": { "type": "string" },
+    "name": { "type": "string" },
+    "source": { "type": "string" },
+    "country": { "type": "string" },
+    "region": { "type": "string" },
+    "createdFrom": {
+      "type": "object",
+      "required": ["canonicalSchema", "canonicalVersion", "entityType", "entityId"],
+      "properties": {
+        "canonicalSchema": { "const": "navdata-canonical" },
+        "canonicalVersion": { "type": "string" },
+        "entityType": { "type": "string" },
+        "entityId": { "type": "string" }
+      }
+    },
+    "lastUpdated": { "type": "string", "format": "date-time" },
+    "sourceRefs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["entityType", "entityId"],
+        "properties": {
+          "entityType": { "type": "string" },
+          "entityId": { "type": "string" },
+          "recordType": { "type": "string" },
+          "recordIndex": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

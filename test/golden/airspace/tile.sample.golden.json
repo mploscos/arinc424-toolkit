@@ -1,0 +1,72 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "airspace:UC:UC:US|N|NYC|C|A",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -73.828125,
+              40.713955826286046
+            ],
+            [
+              -73.828125,
+              40.83854166666667
+            ],
+            [
+              -73.95271084038062,
+              40.713955826286046
+            ],
+            [
+              -73.828125,
+              40.713955826286046
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "airspace:UC:UC:US|N|NYC|C|A",
+        "type": "airspace",
+        "name": "TEST CLASS C",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "UC",
+            "lineNumber": 2,
+            "rawLine": "S   UCUS NYC    C  A00011     G N40400000W074000000                              00000A10000ATEST CLASS C                           ",
+            "entityType": "airspaces",
+            "entityId": "airspace:UC:US|N|NYC|C|A"
+          },
+          {
+            "recordType": "UC",
+            "lineNumber": 3,
+            "rawLine": "S   UCUS NYC    C  A00021     G N40400000W073400000                              00000A10000ATEST CLASS C                           ",
+            "entityType": "airspaces",
+            "entityId": "airspace:UC:US|N|NYC|C|A"
+          },
+          {
+            "recordType": "UC",
+            "lineNumber": 4,
+            "rawLine": "S   UCUS NYC    C  A00031     G N41000000W073400000                              00000A10000ATEST CLASS C                           ",
+            "entityType": "airspaces",
+            "entityId": "airspace:UC:US|N|NYC|C|A"
+          }
+        ],
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "airspace",
+          "entityId": "airspace:UC:UC:US|N|NYC|C|A"
+        },
+        "airspaceClass": "C",
+        "lowerLimit": 0,
+        "upperLimit": 3048,
+        "controllingAuthority": "N",
+        "layer": "airspaces"
+      }
+    }
+  ]
+}

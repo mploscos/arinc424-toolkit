@@ -1,0 +1,170 @@
+{
+  "schema": "arinc-feature-model",
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "generatedAt": null,
+    "source": "FAA-CIFP"
+  },
+  "features": [
+    {
+      "id": "airport:US:KMIN",
+      "layer": "airports",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.76666666666667,
+          40.75
+        ]
+      },
+      "properties": {
+        "id": "airport:US:KMIN",
+        "type": "airport",
+        "name": "Minimal Intl",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "PA",
+            "lineNumber": 2,
+            "rawLine": "S   P KMINUSA                   N40450000W073460000     00010                                Minimal Intl                           ",
+            "entityType": "airports",
+            "entityId": "airport:US:KMIN"
+          }
+        ],
+        "country": "US",
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "airport",
+          "entityId": "airport:US:KMIN"
+        },
+        "icao": "US",
+        "ident": "KMIN",
+        "elevationM": 3.048
+      },
+      "bbox": [
+        -73.76666666666667,
+        40.75,
+        -73.76666666666667,
+        40.75
+      ],
+      "minZoom": 6,
+      "maxZoom": 14,
+      "sourceRefs": [
+        {
+          "recordType": "PA",
+          "lineNumber": 2,
+          "rawLine": "S   P KMINUSA                   N40450000W073460000     00010                                Minimal Intl                           ",
+          "entityType": "airports",
+          "entityId": "airport:US:KMIN"
+        }
+      ]
+    },
+    {
+      "id": "runway:AIRPORT:US:KMIN:04L",
+      "layer": "runways",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.76388888888889,
+          40.74722222222222
+        ]
+      },
+      "properties": {
+        "id": "runway:AIRPORT:US:KMIN:04L",
+        "type": "runway",
+        "name": "RWY 04L",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "PG",
+            "lineNumber": 3,
+            "rawLine": "S   P KMINUSG04L      08000044  N40445000W073455000               00009      150                     RWY 04L                        ",
+            "entityType": "runways",
+            "entityId": "runway:AIRPORT:US:KMIN:04L"
+          }
+        ],
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "runway",
+          "entityId": "runway:AIRPORT:US:KMIN:04L"
+        },
+        "airportId": "airport:US:KMIN",
+        "runwayDesignator": "04L",
+        "headingDeg": 44,
+        "lengthM": 2438.4,
+        "widthM": 45.72
+      },
+      "bbox": [
+        -73.76388888888889,
+        40.74722222222222,
+        -73.76388888888889,
+        40.74722222222222
+      ],
+      "minZoom": 10,
+      "maxZoom": 15,
+      "sourceRefs": [
+        {
+          "recordType": "PG",
+          "lineNumber": 3,
+          "rawLine": "S   P KMINUSG04L      08000044  N40445000W073455000               00009      150                     RWY 04L                        ",
+          "entityType": "runways",
+          "entityId": "runway:AIRPORT:US:KMIN:04L"
+        }
+      ]
+    },
+    {
+      "id": "waypoint:EA:US:K2:MIN1",
+      "layer": "waypoints",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.5,
+          40.666666666666664
+        ]
+      },
+      "properties": {
+        "id": "waypoint:EA:US:K2:MIN1",
+        "type": "waypoint",
+        "name": "MIN FIX 1",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "EA",
+            "lineNumber": 4,
+            "rawLine": "S   EAK2  US MIN1         WPTE  N40400000W073300000                                               MIN FIX 1                         ",
+            "entityType": "waypoints",
+            "entityId": "waypoint:EA:US:K2:MIN1"
+          }
+        ],
+        "country": "US",
+        "region": "K2",
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "waypoint",
+          "entityId": "waypoint:EA:US:K2:MIN1"
+        },
+        "ident": "MIN1",
+        "usage": "E"
+      },
+      "bbox": [
+        -73.5,
+        40.666666666666664,
+        -73.5,
+        40.666666666666664
+      ],
+      "minZoom": 9,
+      "maxZoom": 14,
+      "sourceRefs": [
+        {
+          "recordType": "EA",
+          "lineNumber": 4,
+          "rawLine": "S   EAK2  US MIN1         WPTE  N40400000W073300000                                               MIN FIX 1                         ",
+          "entityType": "waypoints",
+          "entityId": "waypoint:EA:US:K2:MIN1"
+        }
+      ]
+    }
+  ]
+}

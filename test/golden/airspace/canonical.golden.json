@@ -1,0 +1,81 @@
+{
+  "schema": "navdata-canonical",
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "datasetId": null,
+    "source": "FAA-CIFP",
+    "inputFile": null,
+    "effectiveFrom": null,
+    "effectiveTo": null,
+    "generatedAt": null
+  },
+  "entities": {
+    "airports": [],
+    "heliports": [],
+    "runways": [],
+    "waypoints": [],
+    "navaids": [],
+    "airways": [],
+    "airspaces": [
+      {
+        "id": "airspace:UC:UC:US|N|NYC|C|A",
+        "type": "airspace",
+        "airspaceType": "N",
+        "airspaceClass": "C",
+        "restrictiveType": null,
+        "name": "TEST CLASS C",
+        "lowerLimitM": 0,
+        "upperLimitM": 3048,
+        "coordinates": [
+          [
+            -74,
+            40.666666666666664
+          ],
+          [
+            -73.66666666666667,
+            40.666666666666664
+          ],
+          [
+            -73.66666666666667,
+            41
+          ],
+          [
+            -74,
+            40.666666666666664
+          ]
+        ],
+        "bbox": [
+          -74,
+          40.666666666666664,
+          -73.66666666666667,
+          41
+        ],
+        "sourceRefs": [
+          {
+            "recordType": "UC",
+            "lineNumber": 2,
+            "rawLine": "S   UCUS NYC    C  A00011     G N40400000W074000000                              00000A10000ATEST CLASS C                           ",
+            "entityType": "airspaces",
+            "entityId": "airspace:UC:US|N|NYC|C|A"
+          },
+          {
+            "recordType": "UC",
+            "lineNumber": 3,
+            "rawLine": "S   UCUS NYC    C  A00021     G N40400000W073400000                              00000A10000ATEST CLASS C                           ",
+            "entityType": "airspaces",
+            "entityId": "airspace:UC:US|N|NYC|C|A"
+          },
+          {
+            "recordType": "UC",
+            "lineNumber": 4,
+            "rawLine": "S   UCUS NYC    C  A00031     G N41000000W073400000                              00000A10000ATEST CLASS C                           ",
+            "entityType": "airspaces",
+            "entityId": "airspace:UC:US|N|NYC|C|A"
+          }
+        ]
+      }
+    ],
+    "procedures": [],
+    "holds": []
+  }
+}

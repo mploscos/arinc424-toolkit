@@ -1,0 +1,15 @@
+{
+  "schema": "arinc-tiles-manifest",
+  "schemaVersion": "1.0.0",
+  "generatedAt": null,
+  "minZoom": 4,
+  "maxZoom": 10,
+  "tileCount": 23,
+  "layers": [
+    "airways",
+    "navaids",
+    "waypoints"
+  ],
+  "simplify": false,
+  "simplifyTolerance": null
+}

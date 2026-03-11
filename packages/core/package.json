@@ -1,0 +1,15 @@
+{
+  "name": "@arinc/core",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./schema": "./src/schema/index.js"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "test:golden": "node --test test/**/*golden*.test.js",
+    "bench": "node bench/parse.bench.js"
+  }
+}

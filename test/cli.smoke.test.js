@@ -1,0 +1,54 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+
+function run(args, cwd) {
+  return spawnSync(process.execPath, [path.join(cwd, "bin/arinc.js"), ...args], {
+    cwd,
+    encoding: "utf8"
+  });
+}
+
+test("cli smoke: parse -> features -> tiles", () => {
+  const cwd = process.cwd();
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "arinc-cli-"));
+  const fixture = path.join(cwd, "test/fixtures/airway-network.arinc");
+  const canonical = path.join(tmp, "canonical.json");
+  const features = path.join(tmp, "features.json");
+  const tilesOut = path.join(tmp, "tiles");
+
+  let r = run(["parse", fixture, canonical], cwd);
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(fs.existsSync(canonical));
+
+  r = run(["features", canonical, features], cwd);
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(fs.existsSync(features));
+
+  r = run(["tiles", features, tilesOut, "--min-zoom", "4", "--max-zoom", "6"], cwd);
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(fs.existsSync(path.join(tilesOut, "manifest.json")));
+
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("cli smoke: 3dtiles from features", () => {
+  const cwd = process.cwd();
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "arinc-cli-3d-"));
+  const features = path.join(cwd, "test/golden/airspace/features.golden.json");
+  const out = path.join(tmp, "3d");
+
+  const r = run(["3dtiles", features, out], cwd);
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(fs.existsSync(path.join(out, "tileset.json")));
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("cli smoke: invalid command usage returns non-zero", () => {
+  const cwd = process.cwd();
+  const r = run(["parse"], cwd);
+  assert.notEqual(r.status, 0);
+});

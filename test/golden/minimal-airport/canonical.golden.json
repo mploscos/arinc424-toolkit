@@ -1,0 +1,97 @@
+{
+  "schema": "navdata-canonical",
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "datasetId": null,
+    "source": "FAA-CIFP",
+    "inputFile": null,
+    "effectiveFrom": null,
+    "effectiveTo": null,
+    "generatedAt": null
+  },
+  "entities": {
+    "airports": [
+      {
+        "id": "airport:US:KMIN",
+        "type": "airport",
+        "ident": "KMIN",
+        "icao": "US",
+        "name": "Minimal Intl",
+        "iata": null,
+        "coord": [
+          -73.76666666666667,
+          40.75
+        ],
+        "elevationM": 3.048,
+        "sourceRefs": [
+          {
+            "recordType": "PA",
+            "lineNumber": 2,
+            "rawLine": "S   P KMINUSA                   N40450000W073460000     00010                                Minimal Intl                           ",
+            "entityType": "airports",
+            "entityId": "airport:US:KMIN"
+          }
+        ]
+      }
+    ],
+    "heliports": [],
+    "runways": [
+      {
+        "id": "runway:AIRPORT:US:KMIN:04L",
+        "type": "runway",
+        "refs": {
+          "airportId": "airport:US:KMIN"
+        },
+        "airportId": "airport:US:KMIN",
+        "runwayDesignator": "04L",
+        "name": "RWY 04L",
+        "headingDeg": 44,
+        "lengthM": 2438.4,
+        "widthM": 45.72,
+        "coord": [
+          -73.76388888888889,
+          40.74722222222222
+        ],
+        "sourceRefs": [
+          {
+            "recordType": "PG",
+            "lineNumber": 3,
+            "rawLine": "S   P KMINUSG04L      08000044  N40445000W073455000               00009      150                     RWY 04L                        ",
+            "entityType": "runways",
+            "entityId": "runway:AIRPORT:US:KMIN:04L"
+          }
+        ]
+      }
+    ],
+    "waypoints": [
+      {
+        "id": "waypoint:EA:US:K2:MIN1",
+        "type": "waypoint",
+        "ident": "MIN1",
+        "region": "K2",
+        "icao": "US",
+        "usage": "E",
+        "waypointType": "WPT",
+        "name": "MIN FIX 1",
+        "coord": [
+          -73.5,
+          40.666666666666664
+        ],
+        "sourceRefs": [
+          {
+            "recordType": "EA",
+            "lineNumber": 4,
+            "rawLine": "S   EAK2  US MIN1         WPTE  N40400000W073300000                                               MIN FIX 1                         ",
+            "entityType": "waypoints",
+            "entityId": "waypoint:EA:US:K2:MIN1"
+          }
+        ]
+      }
+    ],
+    "navaids": [],
+    "airways": [],
+    "airspaces": [],
+    "procedures": [],
+    "holds": []
+  }
+}

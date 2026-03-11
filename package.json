@@ -1,0 +1,33 @@
+{
+  "name": "arinc424-toolkit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Modular Node.js platform for ARINC 424 canonical parsing, features, tiling and 3D tiles.",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "bin": {
+    "arinc": "./bin/arinc.js"
+  },
+  "scripts": {
+    "test": "npm run test --workspaces && npm run test:root",
+    "test:root": "node --test test/workspace-smoke.test.js test/determinism.test.js",
+    "test:golden": "npm run test:golden --workspaces && node --test test/**/*.golden.test.js",
+    "test:smoke": "node --test test/cli.smoke.test.js",
+    "bench": "npm run bench --workspaces",
+    "update:golden": "node scripts/update-goldens.mjs",
+    "dataset:run": "node scripts/run-large-dataset.mjs",
+    "run:dataset": "npm run dataset:run --",
+    "benchmark:dataset": "npm run dataset:run --",
+    "examples": "node scripts/serve-view-examples.mjs"
+  },
+  "keywords": [
+    "arinc424",
+    "aviation",
+    "geojson",
+    "3dtiles",
+    "tiling"
+  ],
+  "license": "MIT"
+}

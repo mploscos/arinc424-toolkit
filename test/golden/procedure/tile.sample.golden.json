@@ -1,0 +1,128 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "airport:US:KPRC",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73,
+          40.5
+        ]
+      },
+      "properties": {
+        "id": "airport:US:KPRC",
+        "type": "airport",
+        "name": "Procedure Intl",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "PA",
+            "lineNumber": 2,
+            "rawLine": "S   P KPRCUSA                   N40300000W073000000     00020                                Procedure Intl                         ",
+            "entityType": "airports",
+            "entityId": "airport:US:KPRC"
+          }
+        ],
+        "country": "US",
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "airport",
+          "entityId": "airport:US:KPRC"
+        },
+        "icao": "US",
+        "ident": "KPRC",
+        "elevationM": 6.096,
+        "layer": "airports"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "procedure:PD:US:KPRC:PRC1:1:RW04",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -72.83333333333333,
+            40.583333333333336
+          ],
+          [
+            -72.7734375,
+            40.58932291666667
+          ]
+        ]
+      },
+      "properties": {
+        "id": "procedure:PD:US:KPRC:PRC1:1:RW04",
+        "type": "procedure",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "PD",
+            "lineNumber": 5,
+            "rawLine": "S   P KPRCUSDPRC1  1RW04  001PRC1 USEA1    R   TF                                   0500009000     250                              ",
+            "entityType": "procedures",
+            "entityId": "procedure:PD:US:KPRC:PRC1:1:RW04"
+          },
+          {
+            "recordType": "PD",
+            "lineNumber": 6,
+            "rawLine": "S   P KPRCUSDPRC1  1RW04  002PRC2 USEA1    R   TF                                   0500009000     250                              ",
+            "entityType": "procedures",
+            "entityId": "procedure:PD:US:KPRC:PRC1:1:RW04"
+          }
+        ],
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "procedure",
+          "entityId": "procedure:PD:US:KPRC:PRC1:1:RW04"
+        },
+        "procedureType": "PD",
+        "airportId": "airport:US:KPRC",
+        "runwayId": null,
+        "sequenceIndex": 0,
+        "layer": "procedures"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "waypoint:EA:US:K2:PRC1",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -72.83333333333333,
+          40.583333333333336
+        ]
+      },
+      "properties": {
+        "id": "waypoint:EA:US:K2:PRC1",
+        "type": "waypoint",
+        "name": "PROC FIX 1",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "EA",
+            "lineNumber": 3,
+            "rawLine": "S   EAK2  US PRC1         WPTE  N40350000W072500000                                               PROC FIX 1                        ",
+            "entityType": "waypoints",
+            "entityId": "waypoint:EA:US:K2:PRC1"
+          }
+        ],
+        "country": "US",
+        "region": "K2",
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "waypoint",
+          "entityId": "waypoint:EA:US:K2:PRC1"
+        },
+        "ident": "PRC1",
+        "usage": "E",
+        "layer": "waypoints"
+      }
+    }
+  ]
+}

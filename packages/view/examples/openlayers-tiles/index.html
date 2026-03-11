@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ARINC GeoJSON Tiles Viewer (OpenLayers)</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css" />
+    <style>
+      :root {
+        --bg: #f4f6f2;
+        --panel: rgba(255, 255, 255, 0.93);
+        --text: #1e2a23;
+        --border: #b7c5b8;
+      }
+      html,
+      body,
+      #map {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        color: var(--text);
+        background: radial-gradient(circle at 20% 10%, #ebefe7, var(--bg) 55%);
+      }
+      .panel {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 10;
+        width: min(560px, calc(100vw - 24px));
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin: 6px 0;
+      }
+      input {
+        flex: 1;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px;
+        font-size: 12px;
+      }
+      button {
+        border: 1px solid #223b32;
+        border-radius: 8px;
+        background: #223b32;
+        color: #f6fffa;
+        font-size: 12px;
+        padding: 8px 10px;
+        cursor: pointer;
+      }
+      #status {
+        font-size: 12px;
+        opacity: 0.9;
+        margin-top: 6px;
+      }
+      code {
+        background: #eef2ec;
+        border-radius: 6px;
+        padding: 1px 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <div><strong>OpenLayers 2D tiled GeoJSON inspector</strong></div>
+      <div class="row">
+        <label for="indexUrl">Index</label>
+        <input id="indexUrl" type="text" />
+        <button id="load" type="button">Load</button>
+      </div>
+      <div class="row">
+        <button id="pickTilesDir" type="button">Select tiles folder</button>
+        <button id="pickIndexFile" type="button">Select index JSON</button>
+      </div>
+      <div id="status"></div>
+      <div style="font-size:11px; margin-top:6px; opacity:0.8">
+        URL supports <code>visualization.index.json</code> or <code>tiles/index.json</code>
+      </div>
+    </div>
+    <div id="map"></div>
+    <input id="tilesDirInput" type="file" webkitdirectory directory multiple hidden />
+    <input id="indexFileInput" type="file" accept=".json,application/json" hidden />
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

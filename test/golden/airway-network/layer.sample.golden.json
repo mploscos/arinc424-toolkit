@@ -1,0 +1,64 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.16666666666667,
+            40.666666666666664
+          ],
+          [
+            -72,
+            41
+          ],
+          [
+            -72.66666666666667,
+            41.583333333333336
+          ]
+        ]
+      },
+      "properties": {
+        "id": "airway:J75:US:J:L",
+        "type": "airway",
+        "source": "FAA-CIFP",
+        "sourceRefs": [
+          {
+            "recordType": "ER",
+            "lineNumber": 6,
+            "rawLine": "S   ER       J75         0001DIXIEUSEA1     JL                                     05000     18000                                  ",
+            "entityType": "airways",
+            "entityId": "airway:J75:US:J:L"
+          },
+          {
+            "recordType": "ER",
+            "lineNumber": 7,
+            "rawLine": "S   ER       J75         0002MERITUSEA1     JL                                     05000     18000                                  ",
+            "entityType": "airways",
+            "entityId": "airway:J75:US:J:L"
+          },
+          {
+            "recordType": "ER",
+            "lineNumber": 8,
+            "rawLine": "S   ER       J75         0003HFD  USEA1     JL                                     05000     18000                                  ",
+            "entityType": "airways",
+            "entityId": "airway:J75:US:J:L"
+          }
+        ],
+        "createdFrom": {
+          "canonicalSchema": "navdata-canonical",
+          "canonicalVersion": "1.0.0",
+          "entityType": "airway",
+          "entityId": "airway:J75:US:J:L"
+        },
+        "airwayName": "J75",
+        "airwayType": "J",
+        "upperLower": "L",
+        "segmentOrder": 0
+      },
+      "id": "airway:J75:US:J:L"
+    }
+  ]
+}

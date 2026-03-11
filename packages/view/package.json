@@ -1,0 +1,14 @@
+{
+  "name": "@arinc/view",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "test:golden": "node -e \"console.log('No golden tests for @arinc/view')\"",
+    "bench": "node -e \"console.log('No benchmark for @arinc/view')\""
+  }
+}
