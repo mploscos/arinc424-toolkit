@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { build3DTiles as runLegacy3DTiles } from "./run-legacy.js";
-import { validateFeatureModel } from "@arinc/features";
+import { validateFeatureModel } from "@arinc424/features";
 
 function toAirspaceLayerCollection(features, layerCode) {
   return {

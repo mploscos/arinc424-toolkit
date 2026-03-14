@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { parseArincText } from "@arinc/core";
-import { buildFeaturesFromCanonical } from "@arinc/features";
-import { buildGeoJSONLayers, generateTiles } from "@arinc/tiles";
-import { build3DTilesFromFeatures } from "@arinc/3dtiles";
+import { parseArincText } from "@arinc424/core";
+import { buildFeaturesFromCanonical } from "@arinc424/features";
+import { buildGeoJSONLayers, generateTiles } from "@arinc424/tiles";
+import { build3DTilesFromFeatures } from "@arinc424/3dtiles";
 import { hdr, pa, pg, ea, d, uc, pd, er, writeFixture } from "../test/helpers/arinc-line-builder.js";
 
 const root = process.cwd();

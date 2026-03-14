@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.1.1 - 2026-03-14
+
+### Changed
+- Updated npm package metadata (`repository`, `homepage`, `bugs`, `files`, `keywords`) across workspace packages.
+- Standardized package scope to `@arinc424/*` in code, docs, and manifests.
+- Documentation alignment for release/version references.
+
 ## 0.1.0 - 2026-03-11
 
 ### Added

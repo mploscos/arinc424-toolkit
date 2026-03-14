@@ -1,6 +1,6 @@
 {
   "name": "@arinc424/view",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "OpenLayers and Cesium visualization adapters and examples for ARINC outputs.",
   "type": "module",
   "license": "MIT",

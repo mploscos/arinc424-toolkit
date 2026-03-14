@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { parseArincText } from "@arinc/core";
-import { buildFeaturesFromCanonical } from "@arinc/features";
-import { generateTiles } from "@arinc/tiles";
+import { parseArincText } from "@arinc424/core";
+import { buildFeaturesFromCanonical } from "@arinc424/features";
+import { generateTiles } from "@arinc424/tiles";
 
 const FIXTURES = ["minimal-airport", "airway-network", "airspace", "procedure"];
 

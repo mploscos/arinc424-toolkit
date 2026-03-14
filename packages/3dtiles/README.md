@@ -1,4 +1,4 @@
-# @arinc/3dtiles
+# @arinc424/3dtiles
 
 Cesium 3D Tiles builder package.
 

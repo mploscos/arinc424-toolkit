@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
-import { parseArincFile, parseArincText, readCanonicalModel, writeCanonicalModel } from "@arinc/core";
-import { buildFeaturesFromCanonical, validateFeatureModel } from "@arinc/features";
-import { buildGeoJSONLayers, generateTiles, writeTileManifest } from "@arinc/tiles";
-import { build3DTilesFromFeatures } from "@arinc/3dtiles";
+import { parseArincFile, parseArincText, readCanonicalModel, writeCanonicalModel } from "@arinc424/core";
+import { buildFeaturesFromCanonical, validateFeatureModel } from "@arinc424/features";
+import { buildGeoJSONLayers, generateTiles, writeTileManifest } from "@arinc424/tiles";
+import { build3DTilesFromFeatures } from "@arinc424/3dtiles";
 
 function usage() {
   console.log(`Usage:

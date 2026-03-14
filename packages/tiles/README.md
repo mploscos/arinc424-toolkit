@@ -1,4 +1,4 @@
-# @arinc/tiles
+# @arinc424/tiles
 
 Pure Node.js tiling package.
 

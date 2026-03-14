@@ -29,5 +29,13 @@
     "3dtiles",
     "tiling"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mploscos/arinc424-toolkit.git"
+  },
+  "homepage": "https://github.com/mploscos/arinc424-toolkit#readme",
+  "bugs": {
+    "url": "https://github.com/mploscos/arinc424-toolkit/issues"
+  },
   "license": "MIT"
 }

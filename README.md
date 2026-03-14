@@ -64,9 +64,9 @@ See `docs/testing.md` for details.
 Cartography and styling notes: `docs/cartography.md`.
 ARINC UC/UR airspace boundary reconstruction notes: `docs/arinc-airspace-geometry.md`.
 
-## Release 0.1.0
+## Release 0.1.1
 
-Version `0.1.0` is the first public modular release with:
+Version `0.1.1` is the current public modular release with:
 
 - workspace package boundaries (`core` -> `features` -> `tiles`/`3dtiles` -> `view`)
 - contract-driven outputs (`canonical.json`, `features.json`, tile/3D tiles indexes)

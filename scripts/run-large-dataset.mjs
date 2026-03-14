@@ -2,10 +2,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { parseArincFile, writeCanonicalModel } from "@arinc/core";
-import { buildFeaturesFromCanonical, validateFeatureModel } from "@arinc/features";
-import { generateTiles, writeTileManifest } from "@arinc/tiles";
-import { build3DTilesFromFeatures } from "@arinc/3dtiles";
+import { parseArincFile, writeCanonicalModel } from "@arinc424/core";
+import { buildFeaturesFromCanonical, validateFeatureModel } from "@arinc424/features";
+import { generateTiles, writeTileManifest } from "@arinc424/tiles";
+import { build3DTilesFromFeatures } from "@arinc424/3dtiles";
 
 function parseArgs(argv) {
   const args = {

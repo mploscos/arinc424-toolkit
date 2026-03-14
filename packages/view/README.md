@@ -1,4 +1,4 @@
-# @arinc/view
+# @arinc424/view
 
 Visualization adapters and examples for inspecting pipeline outputs.
 

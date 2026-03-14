@@ -1,4 +1,4 @@
-import { validateCanonicalModel } from "@arinc/core";
+import { validateCanonicalModel } from "@arinc424/core";
 import { validateFeatureModel } from "./validate.js";
 
 const DEFAULT_ZOOM_RULES = {

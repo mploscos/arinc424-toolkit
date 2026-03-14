@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildFeaturesFromCanonical } from "@arinc/features";
+import { buildFeaturesFromCanonical } from "@arinc424/features";
 
 test("workspace package resolution works", () => {
   const canonical = {

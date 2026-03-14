@@ -1,4 +1,4 @@
-# @arinc/features
+# @arinc424/features
 
 Canonical-to-feature transformation package.
 
@@ -6,6 +6,6 @@ Canonical-to-feature transformation package.
 
 - `buildFeaturesFromCanonical(canonical, options)`
 - `validateFeatureModel(featureModel)`
-- schema exports under `@arinc/features/schema`
+- schema exports under `@arinc424/features/schema`
 
 Runtime validation enforces base feature contract + per-layer discriminator rules.

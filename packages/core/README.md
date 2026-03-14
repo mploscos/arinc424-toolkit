@@ -1,4 +1,4 @@
-# @arinc/core
+# @arinc424/core
 
 ARINC 424 parsing and canonical model generation.
 
