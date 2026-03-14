@@ -7,6 +7,7 @@ Modular Node.js platform for ARINC 424 ingestion, canonical normalization, featu
 - `@arinc424/toolkit`: convenience metapackage (single install entrypoint)
 - `@arinc424/core`: ARINC parsing + canonical model
 - `@arinc424/features`: canonical -> feature model
+- `@arinc424/analysis`: dataset stats, inspectors, and query helpers
 - `@arinc424/tiles`: grouped GeoJSON + `z/x/y.json` tiling + manifest
 - `@arinc424/3dtiles`: 3D tiles build pipeline driven by feature model input
 - `@arinc424/view`: OpenLayers/Cesium adapters and examples
@@ -22,7 +23,7 @@ npm install @arinc424/toolkit
 Modular install:
 
 ```bash
-npm install @arinc424/core @arinc424/features @arinc424/tiles @arinc424/3dtiles @arinc424/view
+npm install @arinc424/core @arinc424/features @arinc424/analysis @arinc424/tiles @arinc424/3dtiles @arinc424/view
 ```
 
 ## Workspace commands
@@ -39,6 +40,11 @@ arinc parse <input.dat> <canonical.json>
 arinc features <canonical.json> <features.json>
 arinc tiles <features.json> <outDir> [--min-zoom N --max-zoom N]
 arinc 3dtiles <features.json> <outDir>
+arinc stats <canonical-or-features.json> [--json]
+arinc inspect-airspace <canonical.json> <id|token> [--json]
+arinc inspect-airport <canonical.json> <id|ident> [--json]
+arinc inspect-waypoint <canonical.json> <id|ident> [--json]
+arinc query <canonical-or-features.json> [--layer L] [--type T] [--id X] [--bbox minX,minY,maxX,maxY] [--prop k=v] [--limit N] [--json]
 ```
 
 ## Quick Start
@@ -62,10 +68,11 @@ arinc 3dtiles ./artifacts/demo/features.json ./artifacts/demo/3dtiles
 Programmatic entrypoint (metapackage):
 
 ```js
-import { core, features, tiles, threeDTiles } from "@arinc424/toolkit";
+import { core, features, analysis, tiles, threeDTiles } from "@arinc424/toolkit";
 
 const canonical = await core.parseArincFile("./data/FAACIFP18.dat");
 const featureModel = features.buildFeaturesFromCanonical(canonical);
+const stats = analysis.summarizeDataset(canonical);
 const { manifest } = tiles.generateTiles(featureModel, {
   outDir: "./artifacts/demo/tiles",
   minZoom: 4,
@@ -75,6 +82,7 @@ const { manifest } = tiles.generateTiles(featureModel, {
 });
 tiles.writeTileManifest(manifest, "./artifacts/demo/tiles/manifest.json");
 await threeDTiles.build3DTilesFromFeatures(featureModel, { outDir: "./artifacts/demo/3dtiles" });
+console.log(stats.entityCounts);
 ```
 
 For full-run metrics and reporting on large datasets, see `docs/large-dataset.md`.
@@ -102,6 +110,7 @@ Debug mode:
 ```text
 ARINC424 -> @arinc424/core -> canonical model
           -> @arinc424/features -> feature model
+          -> @arinc424/analysis -> stats/inspect/query
           -> @arinc424/tiles -> layers + clipped tiles + manifest
           -> @arinc424/3dtiles -> 3D tiles artifacts
           -> @arinc424/view -> demo adapters/viewers
@@ -111,6 +120,7 @@ Dependency direction:
 
 - `core` -> none
 - `features` -> `core`
+- `analysis` -> `core`, `features`
 - `tiles` -> `features`
 - `3dtiles` -> `features`
 - `view` -> consumes outputs
@@ -132,12 +142,13 @@ npm run update:golden
 ```
 
 See `docs/testing.md` for details.
+Analysis API/CLI notes: `docs/analysis.md`.
 Cartography and styling notes: `docs/cartography.md`.
 ARINC UC/UR airspace boundary reconstruction notes: `docs/arinc-airspace-geometry.md`.
 
-## Release 0.1.3
+## Release 0.1.4
 
-Version `0.1.3` is the current public modular release with:
+Version `0.1.4` is the current public modular release with:
 
 - workspace package boundaries (`core` -> `features` -> `tiles`/`3dtiles` -> `view`)
 - contract-driven outputs (`canonical.json`, `features.json`, tile/3D tiles indexes)
@@ -145,6 +156,7 @@ Version `0.1.3` is the current public modular release with:
 - index-driven viewers for OpenLayers and Cesium
 - improved OpenLayers reliability for sparse `z/x/y.json` tiles (404-as-empty + robust tile loader)
 - airspace debug inspector and geometry debug overlays in OpenLayers (`?debug=1`)
+- new analysis layer (`@arinc424/analysis`) with dataset stats, inspectors, and query helpers
 
 For release details, see [CHANGELOG.md](./CHANGELOG.md).
 

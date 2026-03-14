@@ -4,6 +4,7 @@ Convenience metapackage that bundles the public APIs from:
 
 - `@arinc424/core`
 - `@arinc424/features`
+- `@arinc424/analysis`
 - `@arinc424/tiles`
 - `@arinc424/3dtiles`
 - `@arinc424/view`

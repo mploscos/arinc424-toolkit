@@ -52,3 +52,21 @@ test("cli smoke: invalid command usage returns non-zero", () => {
   const r = run(["parse"], cwd);
   assert.notEqual(r.status, 0);
 });
+
+test("cli smoke: analysis commands", () => {
+  const cwd = process.cwd();
+  const canonical = path.join(cwd, "test/golden/minimal-airport/canonical.golden.json");
+  const features = path.join(cwd, "test/golden/airway-network/features.golden.json");
+
+  let r = run(["stats", canonical, "--json"], cwd);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /\"kind\": \"canonical\"/);
+
+  r = run(["inspect-airport", canonical, "KMIN", "--json"], cwd);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /\"kind\": \"airport\"/);
+
+  r = run(["query", features, "--layer", "airways", "--json"], cwd);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /airway/);
+});

@@ -1,7 +1,7 @@
 {
-  "name": "@arinc424/tiles",
+  "name": "@arinc424/analysis",
   "version": "0.1.4",
-  "description": "Pure Node.js tiling pipeline for ARINC-derived geospatial features.",
+  "description": "Analysis and inspection helpers for ARINC canonical and feature models.",
   "type": "module",
   "license": "MIT",
   "main": "./src/index.js",
@@ -11,7 +11,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mploscos/arinc424-toolkit.git",
-    "directory": "packages/tiles"
+    "directory": "packages/analysis"
   },
   "homepage": "https://github.com/mploscos/arinc424-toolkit#readme",
   "bugs": {
@@ -20,14 +20,15 @@
   "keywords": [
     "arinc424",
     "aviation",
-    "tiles",
-    "geojson"
+    "analysis",
+    "inspection"
   ],
   "files": [
     "src",
     "README.md"
   ],
   "dependencies": {
+    "@arinc424/core": "0.1.4",
     "@arinc424/features": "0.1.4"
   },
   "publishConfig": {
@@ -35,7 +36,7 @@
   },
   "scripts": {
     "test": "node --test test/**/*.test.js",
-    "test:golden": "node --test test/**/*golden*.test.js",
-    "bench": "node bench/tiles.bench.js"
+    "test:golden": "node -e \"console.log('No golden tests for @arinc424/analysis')\"",
+    "bench": "node -e \"console.log('No benchmark yet for @arinc424/analysis')\""
   }
 }

@@ -2,11 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.1.4 - 2026-03-14
+
+### Added
+- Phase 3A analysis layer publicly released:
+  - `@arinc424/analysis` package
+  - CLI analysis commands (`stats`, `inspect-airspace`, `inspect-airport`, `inspect-waypoint`, `query`)
+  - analysis docs (`docs/analysis.md`, package README)
+
+### Changed
+- Workspace package versions aligned to `0.1.4`.
+- Internal workspace dependency versions aligned to `0.1.4`.
+- Root README/testing references aligned to release `0.1.4`.
+
 ## 0.1.3 - 2026-03-14
 
 ### Added
 - OpenLayers debug inspector modules for airspace inspection and geometry overlays.
 - Cartography preparation modules for viewer-side layer/style/label descriptors.
+- New workspace package: `@arinc424/analysis` (Phase 3A).
+  - dataset summaries for canonical and feature models
+  - entity inspectors (`airspace`, `airport`, `waypoint`)
+  - query/filter helpers (`layer`, `type`, `id`, `bbox`, property match)
+  - relation lookup helpers
+- New CLI analysis commands:
+  - `arinc stats`
+  - `arinc inspect-airspace`
+  - `arinc inspect-airport`
+  - `arinc inspect-waypoint`
+  - `arinc query`
+- New analysis documentation:
+  - `packages/analysis/README.md`
+  - `docs/analysis.md`
 
 ### Changed
 - Workspace package versions aligned to `0.1.3`.
