@@ -2,6 +2,80 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+- Phase 3B analysis extensions in `@arinc424/analysis`:
+  - relation builders (`buildRelations`, airport/runway/airway/procedure/airspace helpers)
+  - cross-entity consistency validation (`validateCrossEntityConsistency`)
+  - relational query helper (`queryRelated`)
+  - procedure inspector (`inspectProcedure`)
+- Phase 4A visual QA foundation:
+  - analysis issue feature builder (`buildIssueFeatures`)
+  - dataset runner QA outputs (`analysis/consistency.json`, `analysis/issues.geojson`)
+  - viewer QA controls/layers for OpenLayers and Cesium (toggle/filter/stats/inspector)
+  - new viewer QA documentation (`docs/view-debug.md`)
+- Phase 4B chart-like cartography:
+  - centralized cartography style system (`packages/view/src/cartography/style-system.js`)
+  - zoom-dependent visual hierarchy and label prioritization rules
+  - OpenLayers issue click -> related area highlight + recenter
+  - Cesium issue click -> selection highlight + bbox/point zoom
+- New CLI commands:
+  - `arinc inspect-procedure`
+  - `arinc procedure-geometry`
+  - `arinc related`
+  - `arinc validate-relations`
+- New package: `@arinc424/procedures`
+  - Attachment 5 Phase 1 leg decoding and geometry helpers
+  - supported path terminators: `IF`, `TF`, `CF`, `DF`
+  - unsupported path terminators preserved explicitly in metadata/warnings
+
+### Changed
+- Airport/waypoint/airspace inspectors now include richer relation metadata.
+- Analysis docs and README updated for relation/coherence workflows.
+- README/viewer docs updated for index-driven QA issue rendering.
+- Cartography docs updated with chart-like hierarchy/zoom strategy details.
+- Phase 4C cartography readability refinements:
+  - lighter airspace fills and stronger boundary-led definition
+  - waypoint symbol/label density reduced at low-medium zoom
+  - label priority tuned to favor airspaces over airports, then airways, then waypoints
+  - subtler airway casing
+  - smaller persistent QA issue markers in 2D/3D viewers
+  - muted basemap mode for OpenLayers/Cesium so ARINC overlays read more clearly
+
+## 0.1.5 - 2026-03-14
+
+Attachment 5 Phase 1.
+
+Introduces initial ARINC 424 Path & Terminator support with `IF`, `TF`, `CF`, and `DF` legs.
+Adds a lightweight procedure geometry engine and integrates procedures into the viewer.
+This release establishes the foundation for incremental Attachment 5 support.
+
+### Added
+- Phase 3B analysis release surface:
+  - relation builders and lookup helpers
+  - cross-entity consistency validation
+  - `inspect-procedure`
+  - relational CLI commands (`related`, `validate-relations`)
+- Phase 4A visual QA layer:
+  - `analysis/issues.geojson`
+  - QA controls and issue inspection in OpenLayers/Cesium
+- Phase 4B/4C viewer refinements:
+  - chart-like cartography rules
+  - zoom-aware label hierarchy and declutter
+  - muted basemap mode
+- Attachment 5 Phase 1 release surface:
+  - `@arinc424/procedures`
+  - minimal CLI entrypoint `arinc procedure-geometry`
+  - phase 1 support for `IF`, `TF`, `CF`, `DF`
+  - unsupported leg types preserved explicitly rather than silently approximated
+
+### Changed
+- Workspace package versions aligned to `0.1.5`.
+- Viewer documentation aligned to current `/artifacts/<dataset>/visualization.index.json` workflow.
+- `@arinc424/toolkit` now re-exports the public `@arinc424/view` helpers.
+- `@arinc424/toolkit` now re-exports `@arinc424/procedures`.
+
 ## 0.1.4 - 2026-03-14
 
 ### Added

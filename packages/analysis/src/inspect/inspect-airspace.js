@@ -1,4 +1,5 @@
 import { validateCanonicalModel } from "@arinc424/core";
+import { buildRelations } from "../relations/build-relations.js";
 
 function bboxFromCoordinates(coords) {
   if (!Array.isArray(coords) || coords.length === 0) return null;
@@ -55,11 +56,15 @@ export function inspectAirspace(canonicalModel, idOrToken) {
     }
   }
 
-  const segmentCount = Array.isArray(entity.segmentMetadata)
-    ? entity.segmentMetadata.length
-    : (Array.isArray(entity.reconstructionMetadata?.segmentMetadata)
-      ? entity.reconstructionMetadata.segmentMetadata.length
-      : null);
+  const segmentMetadata = entity.segmentMetadata
+    ?? entity.geometryDebug?.segmentMetadata
+    ?? entity.reconstructionMetadata?.segmentMetadata
+    ?? [];
+
+  const relations = buildRelations(canonicalModel);
+  const row = relations.airspaceRelations[entity.id] ?? {
+    nearbyEntityRefs: []
+  };
 
   return {
     found: true,
@@ -72,21 +77,22 @@ export function inspectAirspace(canonicalModel, idOrToken) {
     geometrySummary: {
       geometryType: "Polygon",
       vertexCount: coords.length,
-      segmentCount,
+      segmentCount: Array.isArray(segmentMetadata) ? segmentMetadata.length : null,
       hasArcSegments: Boolean(
-        (entity.segmentMetadata ?? entity.reconstructionMetadata?.segmentMetadata ?? [])
-          .some((s) => ["L", "R", "C", "A"].includes(String(s?.via || "").toUpperCase()))
+        (segmentMetadata ?? []).some((s) => ["L", "R", "C", "A"].includes(String(s?.via || "").toUpperCase()))
       )
     },
     relatedEntities: {
       restrictiveType: entity.restrictiveType ?? null,
       airspaceClass: entity.airspaceClass ?? null,
-      airspaceType: entity.airspaceType ?? null
+      airspaceType: entity.airspaceType ?? null,
+      segmentMetadata,
+      nearbyEntities: row.nearbyEntityRefs ?? []
     },
     limits: {
       lowerLimitM: entity.lowerLimitM ?? null,
       upperLimitM: entity.upperLimitM ?? null
     },
-    warnings
+    warnings: [...new Set(warnings)].sort((a, b) => a.localeCompare(b))
   };
 }

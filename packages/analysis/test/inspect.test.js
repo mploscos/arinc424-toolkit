@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { parseArincText } from "@arinc424/core";
-import { inspectAirspace, inspectAirport, inspectWaypoint } from "../src/index.js";
+import { inspectAirspace, inspectAirport, inspectWaypoint, inspectProcedure } from "../src/index.js";
 
 import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -30,6 +30,7 @@ test("inspectAirport resolves by ident", async () => {
   assert.equal(inspected.kind, "airport");
   assert.equal(inspected.ident, "KMIN");
   assert.equal(inspected.relatedEntities.runways.length, 1);
+  assert.ok(inspected.relationSummary);
 });
 
 test("inspectWaypoint resolves connected entities", async () => {
@@ -39,4 +40,14 @@ test("inspectWaypoint resolves connected entities", async () => {
   assert.equal(inspected.kind, "waypoint");
   assert.equal(inspected.ident, "DIXIE");
   assert.ok(Array.isArray(inspected.relatedEntities.airways));
+  assert.ok(Array.isArray(inspected.relatedEntities.holds));
+});
+
+test("inspectProcedure resolves airport and fixes", async () => {
+  const canonical = await loadCanonical("procedure.arinc");
+  const inspected = inspectProcedure(canonical, "PRC1");
+  assert.equal(inspected.found, true);
+  assert.equal(inspected.kind, "procedure");
+  assert.equal(inspected.relatedEntities.airport.ident, "KPRC");
+  assert.ok(inspected.relatedEntities.fixes.length >= 1);
 });

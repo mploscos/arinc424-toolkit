@@ -5,13 +5,17 @@ import { parseArincFile, parseArincText, readCanonicalModel, writeCanonicalModel
 import { buildFeaturesFromCanonical, validateFeatureModel } from "@arinc424/features";
 import { buildGeoJSONLayers, generateTiles, writeTileManifest } from "@arinc424/tiles";
 import { build3DTilesFromFeatures } from "@arinc424/3dtiles";
+import { buildProcedureGeometry } from "@arinc424/procedures";
 import {
   summarizeDataset,
   summarizeFeatures,
   inspectAirspace,
   inspectAirport,
   inspectWaypoint,
+  inspectProcedure,
   queryEntities,
+  queryRelated,
+  validateCrossEntityConsistency,
   formatSummary
 } from "@arinc424/analysis";
 
@@ -26,7 +30,11 @@ function usage() {
   arinc inspect-airspace <canonical.json> <id|token> [--json]
   arinc inspect-airport <canonical.json> <id|ident> [--json]
   arinc inspect-waypoint <canonical.json> <id|ident> [--json]
+  arinc inspect-procedure <canonical.json> <id|token> [--json]
+  arinc procedure-geometry <canonical.json> <id|token> [--json]
   arinc query <canonical-or-features.json> [--layer L] [--type T] [--id X] [--bbox minX,minY,maxX,maxY] [--prop k=v] [--limit N] [--json]
+  arinc related <canonical.json> (--airport X | --runway X | --waypoint X | --airway X | --procedure X | --airspace X) --relation R [--json]
+  arinc validate-relations <canonical.json> [--json]
 
 Notes:
   - The CLI is orchestration-only; domain logic lives in workspace packages.
@@ -166,6 +174,24 @@ async function main() {
     return;
   }
 
+  if (cmd === "inspect-procedure") {
+    const [input, idOrToken, ...rest] = args;
+    if (!input || !idOrToken) { usage(); process.exit(1); }
+    const canonical = readCanonicalModel(path.resolve(input));
+    const payload = inspectProcedure(canonical, idOrToken);
+    outputResult(payload, hasFlag(rest, "--json"));
+    return;
+  }
+
+  if (cmd === "procedure-geometry") {
+    const [input, idOrToken, ...rest] = args;
+    if (!input || !idOrToken) { usage(); process.exit(1); }
+    const canonical = readCanonicalModel(path.resolve(input));
+    const payload = buildProcedureGeometry(canonical, idOrToken);
+    outputResult(payload, hasFlag(rest, "--json"));
+    return;
+  }
+
   if (cmd === "query") {
     const [input, ...rest] = args;
     if (!input) { usage(); process.exit(1); }
@@ -180,6 +206,33 @@ async function main() {
       limit: limitRaw !== undefined ? Number(limitRaw) : undefined
     });
     outputResult(payload, hasFlag(rest, "--json"));
+    return;
+  }
+
+  if (cmd === "related") {
+    const [input, ...rest] = args;
+    if (!input) { usage(); process.exit(1); }
+    const canonical = readCanonicalModel(path.resolve(input));
+    const payload = queryRelated(canonical, {
+      airport: getFlagValue(rest, "--airport"),
+      runway: getFlagValue(rest, "--runway"),
+      waypoint: getFlagValue(rest, "--waypoint"),
+      airway: getFlagValue(rest, "--airway"),
+      procedure: getFlagValue(rest, "--procedure"),
+      airspace: getFlagValue(rest, "--airspace"),
+      relation: getFlagValue(rest, "--relation")
+    });
+    outputResult(payload, hasFlag(rest, "--json"));
+    return;
+  }
+
+  if (cmd === "validate-relations") {
+    const [input, ...rest] = args;
+    if (!input) { usage(); process.exit(1); }
+    const canonical = readCanonicalModel(path.resolve(input));
+    const payload = validateCrossEntityConsistency(canonical);
+    outputResult(payload, hasFlag(rest, "--json"));
+    if (!payload.valid) process.exitCode = 2;
     return;
   }
 

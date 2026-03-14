@@ -19,7 +19,16 @@ export {
   getDefaultLayerDescriptor,
   listDefaultLayerDescriptors,
   geometryTypeFromGeometry,
-  buildLabelCandidates
+  buildLabelCandidates,
+  isFeatureVisibleAtZoom,
+  getAirspaceStyle,
+  getAirwayStyle,
+  getAirportStyle,
+  getWaypointStyle,
+  getRunwayStyle,
+  getProcedureStyle,
+  getLabelRule,
+  getChartStyleToken
 } from "./cartography/index.js";
 
 export {

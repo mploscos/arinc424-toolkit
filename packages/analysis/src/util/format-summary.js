@@ -11,6 +11,9 @@ function formatObjectLines(obj, indent = "  ") {
  * @returns {string}
  */
 export function formatSummary(value) {
+  if (Array.isArray(value)) {
+    return `Results: ${value.length}\n${JSON.stringify(value, null, 2)}`;
+  }
   if (!value || typeof value !== "object") return String(value);
 
   if (value.schema === "arinc-analysis-summary") {
@@ -37,8 +40,31 @@ export function formatSummary(value) {
     ].join("\n");
   }
 
+  if (value.valid !== undefined && Array.isArray(value.errors) && Array.isArray(value.warnings)) {
+    return [
+      `Cross-entity consistency: ${value.valid ? "VALID" : "INVALID"}`,
+      `- errors: ${value.errors.length}`,
+      `- warnings: ${value.warnings.length}`,
+      value.errors.length ? `Errors:\n${value.errors.map((e) => `  - ${e}`).join("\n")}` : "",
+      value.warnings.length ? `Warnings:\n${value.warnings.map((w) => `  - ${w}`).join("\n")}` : ""
+    ].filter(Boolean).join("\n");
+  }
+
   if (value.found === false) {
     return `${value.kind ?? "entity"}: not found (${value.input ?? ""})`;
+  }
+
+  if (value.kind === "procedure" || value.kind === "airport" || value.kind === "airspace" || value.kind === "waypoint") {
+    return JSON.stringify(value, null, 2);
+  }
+
+  if (value.relation && Array.isArray(value.results)) {
+    return [
+      `Related query (${value.kind}:${value.id})`,
+      `- relation: ${value.relation}`,
+      `- count: ${value.results.length}`,
+      value.results.length ? JSON.stringify(value.results, null, 2) : ""
+    ].filter(Boolean).join("\n");
   }
 
   return JSON.stringify(value, null, 2);

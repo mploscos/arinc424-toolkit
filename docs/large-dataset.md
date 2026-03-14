@@ -73,13 +73,13 @@ npm run examples
 
 Preferred URL:
 
-`http://localhost:8080/openlayers-tiles/?index=/data/visualization.index.json`
+`http://localhost:8080/openlayers-tiles/?index=/artifacts/<dataset>/visualization.index.json`
 
 Alternative direct URL:
 
-`http://localhost:8080/openlayers-tiles/?index=/data/tiles/index.json`
+`http://localhost:8080/openlayers-tiles/?index=/artifacts/<dataset>/tiles/index.json`
 
-You can also use viewer buttons **Select tiles folder** / **Select index JSON** for local file inspection.
+You can also use the viewer button **Select visualization.index.json**.
 
 ### Cesium (3D Tiles)
 
@@ -90,13 +90,13 @@ npm run examples
 
 Preferred URL:
 
-`http://localhost:8080/cesium-3dtiles/?index=/data/visualization.index.json`
+`http://localhost:8080/cesium-3dtiles/?index=/artifacts/<dataset>/visualization.index.json`
 
 Alternative direct URL:
 
-`http://localhost:8080/cesium-3dtiles/?index=/data/3dtiles/index.json`
+`http://localhost:8080/cesium-3dtiles/?index=/artifacts/<dataset>/3dtiles/index.json`
 
-You can also use **Select 3dtiles folder** or **Select index JSON** from the UI.
+You can also use the viewer button **Select visualization.index.json**.
 
 ## Report contents
 

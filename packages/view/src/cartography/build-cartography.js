@@ -49,6 +49,13 @@ function normalizeFeatureBounds(feature) {
   return collectBoundsFromGeometry(feature?.geometry);
 }
 
+function normalizeLayerName(layerName) {
+  const key = String(layerName || "").toLowerCase();
+  if (key === "procedure") return "procedures";
+  if (key === "hold") return "holds";
+  return key;
+}
+
 /**
  * Build a rendering-oriented cartography descriptor.
  * @param {{features?:Array<object>}} featureModel
@@ -74,7 +81,7 @@ export function buildCartography(featureModel, seed = {}) {
   let globalBounds = Array.isArray(seed.bounds) && seed.bounds.length === 4 ? [...seed.bounds] : null;
 
   for (const feature of features) {
-    const layerName = String(feature?.layer || "").toLowerCase();
+    const layerName = normalizeLayerName(feature?.layer);
     const descriptor = layerMap.get(layerName) || (() => {
       const def = getDefaultLayerDescriptor(layerName);
       const fresh = {

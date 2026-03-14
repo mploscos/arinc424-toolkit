@@ -16,7 +16,9 @@ function firstTextValue(properties, fields) {
 export function buildLabelCandidates(features, layerMap) {
   const out = [];
   for (const feature of features ?? []) {
-    const layer = String(feature?.layer || "").toLowerCase();
+    let layer = String(feature?.layer || "").toLowerCase();
+    if (layer === "procedure") layer = "procedures";
+    if (layer === "hold") layer = "holds";
     const descriptor = layerMap.get(layer);
     if (!descriptor?.label?.enabled) continue;
     const text = firstTextValue(feature?.properties ?? {}, descriptor.label.fields ?? []);
@@ -31,8 +33,10 @@ export function buildLabelCandidates(features, layerMap) {
       layer,
       text,
       minZoom: labelMinZoom,
-      priority: descriptor.styleHint === "airspace" ? 5 : 1
+      priority: Number.isFinite(descriptor?.label?.priority)
+        ? descriptor.label.priority
+        : (descriptor.styleHint === "airspace" ? 80 : 20)
     });
   }
-  return out.sort((a, b) => a.layer.localeCompare(b.layer) || a.text.localeCompare(b.text));
+  return out.sort((a, b) => (b.priority - a.priority) || a.layer.localeCompare(b.layer) || a.text.localeCompare(b.text));
 }

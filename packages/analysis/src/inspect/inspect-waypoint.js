@@ -1,4 +1,6 @@
 import { validateCanonicalModel } from "@arinc424/core";
+import { buildLookups } from "../relations/build-lookups.js";
+import { buildRelations } from "../relations/build-relations.js";
 
 function findWaypoint(waypoints, token) {
   const t = String(token || "").trim().toLowerCase();
@@ -8,10 +10,6 @@ function findWaypoint(waypoints, token) {
     || waypoints.find((w) => String(w.name || "").toLowerCase() === t)
     || waypoints.find((w) => String(w.id || "").toLowerCase().endsWith(t))
     || null;
-}
-
-function coordNear(a, b, eps = 1e-9) {
-  return Array.isArray(a) && Array.isArray(b) && Math.abs(a[0] - b[0]) <= eps && Math.abs(a[1] - b[1]) <= eps;
 }
 
 /**
@@ -25,18 +23,33 @@ export function inspectWaypoint(canonicalModel, idOrIdent) {
   const waypoint = findWaypoint(canonicalModel.entities.waypoints ?? [], idOrIdent);
   if (!waypoint) return { found: false, input: idOrIdent, kind: "waypoint", warnings: ["Waypoint not found"] };
 
-  const coord = Array.isArray(waypoint.coord) ? waypoint.coord : null;
+  const lookups = buildLookups(canonicalModel);
+  const relations = buildRelations(canonicalModel);
+  const row = relations.waypointRelations[waypoint.id] ?? {
+    airwayIds: [],
+    procedureIds: [],
+    holdIds: []
+  };
 
-  const airways = (canonicalModel.entities.airways ?? [])
-    .filter((a) => Array.isArray(a.coordinates) && coord && a.coordinates.some((c) => coordNear(c, coord)))
+  const airways = row.airwayIds
+    .map((id) => lookups.airwaysById.get(id))
+    .filter(Boolean)
     .map((a) => ({ id: a.id, airwayName: a.airwayName ?? null, airwayType: a.airwayType ?? null }))
     .sort((a, b) => a.id.localeCompare(b.id));
 
-  const procedures = (canonicalModel.entities.procedures ?? [])
-    .filter((p) => Array.isArray(p.coordinates) && coord && p.coordinates.some((c) => coordNear(c, coord)))
+  const procedures = row.procedureIds
+    .map((id) => lookups.proceduresById.get(id))
+    .filter(Boolean)
     .map((p) => ({ id: p.id, procedureType: p.procedureType ?? null, airportId: p.airportId ?? null }))
     .sort((a, b) => a.id.localeCompare(b.id));
 
+  const holds = row.holdIds
+    .map((id) => lookups.holdsById.get(id))
+    .filter(Boolean)
+    .map((h) => ({ id: h.id, minAltitudeM: h.minAltitudeM ?? null, maxAltitudeM: h.maxAltitudeM ?? null }))
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  const coord = Array.isArray(waypoint.coord) ? waypoint.coord : null;
   return {
     found: true,
     kind: "waypoint",
@@ -52,7 +65,13 @@ export function inspectWaypoint(canonicalModel, idOrIdent) {
     },
     relatedEntities: {
       airways,
-      procedures
+      procedures,
+      holds
+    },
+    relationSummary: {
+      airwayCount: airways.length,
+      procedureCount: procedures.length,
+      holdCount: holds.length
     },
     warnings: []
   };

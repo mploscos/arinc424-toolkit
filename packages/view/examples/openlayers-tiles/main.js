@@ -13,6 +13,7 @@ import { transformExtent, fromLonLat } from "https://esm.sh/ol@10.6.1/proj.js";
 import Feature from "https://esm.sh/ol@10.6.1/Feature.js";
 import Polygon from "https://esm.sh/ol@10.6.1/geom/Polygon.js";
 import Point from "https://esm.sh/ol@10.6.1/geom/Point.js";
+import CircleGeom from "https://esm.sh/ol@10.6.1/geom/Circle.js";
 import {
   load2DTilesIndex,
   isVisualizationIndex
@@ -21,6 +22,10 @@ import {
   buildCartography,
   getDefaultLayerDescriptor
 } from "./cartography.js";
+import {
+  getChartStyleToken,
+  getLabelRule
+} from "./cartography-style-system.js";
 import {
   isAirspaceFeature,
   extractAirspaceInspection,
@@ -33,17 +38,16 @@ import {
 } from "./debug/geometry-debug-overlay.js";
 
 const params = new URLSearchParams(window.location.search);
-const defaultIndexUrl = params.get("index") || "/data/visualization.index.json";
+const defaultIndexUrl = params.get("index") || "";
 const labelsEnabled = params.get("labels") !== "0";
 const labelsMinZoom = Number(params.get("labelsMinZoom") ?? 7);
 const debugEnabled = params.get("debug") === "1";
+const basemapMode = params.get("basemap") || "muted";
 
 const statusEl = document.getElementById("status");
 const indexUrlEl = document.getElementById("indexUrl");
 const loadBtn = document.getElementById("load");
-const pickTilesDirBtn = document.getElementById("pickTilesDir");
 const pickIndexFileBtn = document.getElementById("pickIndexFile");
-const tilesDirInput = document.getElementById("tilesDirInput");
 const indexFileInput = document.getElementById("indexFileInput");
 const debugControlsEl = document.getElementById("debugControls");
 const airspaceInspectorEl = document.getElementById("airspaceInspector");
@@ -51,8 +55,18 @@ const dbgInspectorEl = document.getElementById("dbgInspector");
 const dbgArcCentersEl = document.getElementById("dbgArcCenters");
 const dbgSegmentPointsEl = document.getElementById("dbgSegmentPoints");
 const dbgTileGridEl = document.getElementById("dbgTileGrid");
+const qaShowIssuesEl = document.getElementById("qaShowIssues");
+const qaSeverityEl = document.getElementById("qaSeverity");
+const qaTypeEl = document.getElementById("qaType");
+const qaStatsEl = document.getElementById("qaStats");
+const issueInspectorEl = document.getElementById("issueInspector");
+const procShowEl = document.getElementById("procShow");
+const procAirportEl = document.getElementById("procAirport");
+const procRunwayEl = document.getElementById("procRunway");
+const procTypeEl = document.getElementById("procType");
+const procSelectEl = document.getElementById("procSelect");
 
-indexUrlEl.value = defaultIndexUrl;
+indexUrlEl.value = defaultIndexUrl || "/artifacts/<dataset>/visualization.index.json";
 const DEBUG_PREFIX = "[arinc-view:ol]";
 const debugLog = (...args) => { if (debugEnabled) console.log(DEBUG_PREFIX, ...args); };
 const debugWarn = (...args) => { if (debugEnabled) console.warn(DEBUG_PREFIX, ...args); };
@@ -65,52 +79,15 @@ const debugUiState = {
   segmentPoints: debugEnabled ? Boolean(dbgSegmentPointsEl?.checked ?? false) : false,
   tileGrid: debugEnabled ? Boolean(dbgTileGridEl?.checked ?? true) : false
 };
-
-const staticStyleByHint = {
-  airport: new Style({
-    image: new CircleStyle({ radius: 6, fill: new Fill({ color: "#1b4f81" }), stroke: new Stroke({ color: "#ffffff", width: 1.5 }) }),
-    zIndex: 90
-  }),
-  heliport: new Style({
-    image: new CircleStyle({ radius: 5, fill: new Fill({ color: "#805300" }), stroke: new Stroke({ color: "#ffffff", width: 1.2 }) }),
-    zIndex: 89
-  }),
-  runway: new Style({
-    stroke: new Stroke({ color: "#2b2b2b", width: 3 }),
-    zIndex: 80
-  }),
-  waypoint: new Style({
-    image: new CircleStyle({ radius: 3.5, fill: new Fill({ color: "#118a63" }), stroke: new Stroke({ color: "#ffffff", width: 1 }) }),
-    zIndex: 95
-  }),
-  navaid: new Style({
-    image: new CircleStyle({ radius: 4.5, fill: new Fill({ color: "#6940b5" }), stroke: new Stroke({ color: "#ffffff", width: 1 }) }),
-    zIndex: 94
-  }),
-  airway: new Style({
-    stroke: new Stroke({ color: "#f08c1a", width: 1.8 }),
-    zIndex: 40
-  }),
-  airspace: new Style({
-    fill: new Fill({ color: "rgba(55, 112, 209, 0.10)" }),
-    stroke: new Stroke({ color: "rgba(55, 112, 209, 0.95)", width: 1.5 }),
-    zIndex: 10
-  }),
-  procedure: new Style({
-    stroke: new Stroke({ color: "#c91a6f", width: 2, lineDash: [8, 4] }),
-    zIndex: 70
-  }),
-  hold: new Style({
-    stroke: new Stroke({ color: "#7d4d2a", width: 2, lineDash: [3, 4] }),
-    zIndex: 65
-  })
+const procedureUiState = {
+  show: false,
+  airport: "all",
+  runway: "all",
+  type: "all",
+  selected: "all",
+  catalog: []
 };
 
-const restrictedAirspaceStyle = new Style({
-  fill: new Fill({ color: "rgba(124, 76, 173, 0.12)" }),
-  stroke: new Stroke({ color: "rgba(124, 76, 173, 0.95)", width: 1.4, lineDash: [6, 4] }),
-  zIndex: 11
-});
 const debugAirspaceBoundaryStyle = new Style({
   stroke: new Stroke({ color: "rgba(255, 20, 20, 0.95)", width: 2.2 }),
   zIndex: 130
@@ -131,6 +108,22 @@ const debugSegmentPointStyle = new Style({
   }),
   zIndex: 919
 });
+const issueErrorStyle = new Style({
+  image: new CircleStyle({
+    radius: 4.6,
+    fill: new Fill({ color: "rgba(220, 30, 30, 0.92)" }),
+    stroke: new Stroke({ color: "#ffffff", width: 1.4 })
+  }),
+  zIndex: 990
+});
+const issueWarningStyle = new Style({
+  image: new CircleStyle({
+    radius: 3.8,
+    fill: new Fill({ color: "rgba(245, 147, 30, 0.92)" }),
+    stroke: new Stroke({ color: "#ffffff", width: 1.2 })
+  }),
+  zIndex: 989
+});
 
 const fallbackStyle = new Style({
   stroke: new Stroke({ color: "#234f3f", width: 1.3 }),
@@ -138,14 +131,22 @@ const fallbackStyle = new Style({
   zIndex: 1
 });
 const labelStyleCache = new Map();
+const chartStyleCache = new Map();
 
 const map = new Map({
   target: "map",
   layers: [
-    new TileLayer({ source: new OSM() })
+    new TileLayer({
+      source: new OSM(),
+      className: "basemap-layer",
+      opacity: basemapMode === "muted" ? 0.94 : 1
+    })
   ],
   view: new View({ center: [-8250000, 4950000], zoom: 6, minZoom: 2, maxZoom: 15 })
 });
+if (basemapMode === "muted") {
+  map.getTargetElement()?.classList.add("basemap-muted");
+}
 
 let tileLayer = null;
 let activeCartography = { layers: [], labelCandidates: [], bounds: null };
@@ -160,6 +161,13 @@ let debugArcCenterLayer = null;
 let debugSegmentPointLayer = null;
 let debugArcCenterSource = null;
 let debugSegmentPointSource = null;
+let issueLayer = null;
+let issueSource = null;
+let issueHighlightLayer = null;
+let issueHighlightSource = null;
+let issueFeaturesRaw = [];
+let issueFilterSeverity = "all";
+let issueFilterType = "all";
 const debugTileBoundaryFeatures = new Map();
 const debugTileCountFeatures = new Map();
 const debugTileCountStyleCache = new Map();
@@ -187,45 +195,102 @@ function styleByLayer(feature, resolution) {
   const descriptor = activeLayerDescriptorMap.get(layer) || getDefaultLayerDescriptor(layer);
 
   const zoom = map.getView().getZoomForResolution(resolution);
-  if (Number.isFinite(zoom)) {
-    if (Number.isFinite(descriptor.minZoom) && zoom < descriptor.minZoom) return null;
-    if (Number.isFinite(descriptor.maxZoom) && zoom > descriptor.maxZoom) return null;
+  const isProcedure = isProcedureLayerName(layer);
+  const procedureMeta = isProcedure ? deriveProcedureDisplayFromFeature(feature) : null;
+  const procedureSelected = procedureMeta ? procedureIsSelected(procedureMeta) : false;
+  if (isProcedure) {
+    if (!procedureUiState.show && !procedureSelected) return null;
+    if (!procedureMatchesFilters(procedureMeta) && !procedureSelected) return null;
   }
+  const token = getChartStyleToken(feature, descriptor, zoom);
+  if (!token) return null;
+  const out = [];
 
-  const layerStyle = staticStyleByHint[descriptor.styleHint] || fallbackStyle;
-  const out = [layerStyle];
-
-  if (descriptor.styleHint === "airspace") {
-    const restrictive = feature.get("restrictiveType");
-    if (restrictive) out[0] = restrictedAirspaceStyle;
-    if (debugEnabled) out.push(debugAirspaceBoundaryStyle);
+  const styleKey = JSON.stringify({ ...token, procedureRenderMode: isProcedure ? (procedureSelected ? "selected" : "muted") : "default" });
+  let chartStyles = chartStyleCache.get(styleKey);
+  if (!chartStyles) {
+    if (token.kind === "airspace") {
+      chartStyles = [new Style({
+        fill: new Fill({ color: token.fill }),
+        stroke: new Stroke({ color: token.stroke, width: token.width, lineDash: token.lineDash || undefined }),
+        zIndex: 10
+      })];
+    } else if (token.kind === "airway") {
+      chartStyles = [];
+      if (token.casing && token.casingWidth > 0) {
+        chartStyles.push(new Style({
+          stroke: new Stroke({ color: token.casing, width: token.casingWidth }),
+          zIndex: 35
+        }));
+      }
+      chartStyles.push(new Style({
+        stroke: new Stroke({ color: token.stroke, width: token.width }),
+        zIndex: 40
+      }));
+    } else if (token.kind === "airport") {
+      chartStyles = [new Style({
+        image: new CircleStyle({
+          radius: token.radius,
+          fill: new Fill({ color: token.fill }),
+          stroke: new Stroke({ color: token.stroke, width: token.strokeWidth })
+        }),
+        zIndex: 90
+      })];
+    } else if (token.kind === "runway") {
+      chartStyles = [new Style({
+        stroke: new Stroke({ color: token.stroke, width: token.width }),
+        zIndex: 80
+      })];
+    } else if (token.kind === "waypoint") {
+      chartStyles = [new Style({
+        image: new CircleStyle({
+          radius: token.radius,
+          fill: new Fill({ color: token.fill }),
+          stroke: new Stroke({ color: token.stroke, width: token.strokeWidth })
+        }),
+        zIndex: 95
+      })];
+    } else if (token.kind === "procedure") {
+      chartStyles = [new Style({
+        stroke: new Stroke({
+          color: procedureSelected ? "rgba(255, 0, 255, 0.96)" : "rgba(255, 0, 255, 0.2)",
+          width: procedureSelected ? token.width : Math.max(1, token.width - 0.45),
+          lineDash: token.lineDash || undefined
+        }),
+        image: token.pointRadius > 0 ? new CircleStyle({
+          radius: procedureSelected ? token.pointRadius : Math.max(2, token.pointRadius - 0.5),
+          fill: new Fill({ color: procedureSelected ? "rgba(255, 0, 255, 0.96)" : "rgba(255, 0, 255, 0.2)" }),
+          stroke: new Stroke({ color: "#ffffff", width: 1.1 })
+        }) : undefined,
+        zIndex: 70
+      })];
+    } else {
+      chartStyles = [fallbackStyle];
+    }
+    chartStyleCache.set(styleKey, chartStyles);
   }
+  out.push(...chartStyles);
+
+  if (descriptor.styleHint === "airspace" && debugEnabled) out.push(debugAirspaceBoundaryStyle);
 
   if (!labelsEnabled) return out;
-  const labelFields = Array.isArray(descriptor?.label?.fields) ? descriptor.label.fields : ["name", "ident", "id"];
-  const labelFloor = Number.isFinite(descriptor?.label?.minZoom) ? descriptor.label.minZoom : labelsMinZoom;
-  if (!Number.isFinite(zoom) || zoom < Math.max(labelsMinZoom, labelFloor)) return out;
   if (!descriptor?.label?.enabled) return out;
-
-  const label = String(
-    labelFields.map((f) => feature.get(f)).find((v) => String(v ?? "").trim().length > 0)
-      ?? feature.get("id")
-      ?? ""
-  ).trim();
-  if (!label) return out;
-
-  const key = `${layer}|${label}`;
+  if (isProcedure && !procedureSelected) return out;
+  const labelRule = getLabelRule(feature, descriptor, zoom, labelsMinZoom);
+  if (!labelRule.enabled) return out;
+  const label = labelRule.text;
+  const key = `${layer}|${label}|${labelRule.priority}`;
   let labelStyle = labelStyleCache.get(key);
   if (!labelStyle) {
     labelStyle = new Style({
       text: new Text({
         text: label,
-        font: "12px 'Segoe UI', sans-serif",
-        fill: new Fill({ color: "#202020" }),
-        stroke: new Stroke({ color: "#ffffff", width: 3 }),
+        font: labelRule.priority >= 95 ? "600 12px 'Segoe UI', sans-serif" : "11px 'Segoe UI', sans-serif",
+        fill: new Fill({ color: "#243129" }),
+        stroke: new Stroke({ color: "rgba(255,255,255,0.92)", width: 2.6 }),
         overflow: true
       }),
-      zIndex: 120
+      zIndex: 120 + Math.min(labelRule.priority, 120)
     });
     labelStyleCache.set(key, labelStyle);
   }
@@ -235,6 +300,282 @@ function styleByLayer(feature, resolution) {
 
 function setStatus(text) {
   statusEl.textContent = text;
+}
+
+function isProcedureLayerName(layer) {
+  const key = String(layer || "").toLowerCase();
+  return key === "procedure" || key === "procedures";
+}
+
+function parseProcedureIdParts(rawId) {
+  const text = String(rawId ?? "").trim();
+  if (!text) return {};
+  const parts = text.split(":");
+  if (parts[0] !== "procedure") return {};
+  return {
+    routeType: parts[1] ?? null,
+    airportIdent: parts[3] ?? null,
+    ident: parts[4] ?? null,
+    runwayToken: parts[6] ?? null
+  };
+}
+
+function normalizeProcedureCategory(rawType) {
+  const raw = String(rawType ?? "").trim().toUpperCase();
+  if (["APPROACH", "APP", "IAP", "PA", "PF", "PI"].includes(raw)) return "APPROACH";
+  if (["SID", "PD", "PE"].includes(raw)) return "SID";
+  if (["STAR", "STARS", "PS"].includes(raw)) return "STAR";
+  return raw || "PROCEDURE";
+}
+
+function deriveProcedureDisplayFromProps(props = {}) {
+  const parsed = parseProcedureIdParts(props.procedureId ?? props.id);
+  const category = normalizeProcedureCategory(props.procedureType ?? props.routeType ?? parsed.routeType);
+  const ident = String(props.procedureName ?? props.name ?? props.ident ?? parsed.ident ?? "").trim();
+  const runwayRaw = String(props.runway ?? props.runwayName ?? props.runwayId ?? parsed.runwayToken ?? "").trim();
+  const runway = runwayRaw.replace(/^runway:/i, "");
+  const transition = String(props.transition ?? props.transitionId ?? "").trim();
+  const airportRaw = String(props.airportIdent ?? props.airportId ?? parsed.airportIdent ?? "").trim();
+  const airport = airportRaw.replace(/^airport:[A-Z0-9]+:/i, "");
+  const parts = [];
+  if (ident) parts.push(ident);
+  if (runway) parts.push(runway);
+  if (transition && transition !== runway) parts.push(transition);
+  return {
+    key: String(props.procedureId ?? props.id ?? ident ?? transition ?? runway ?? category),
+    category,
+    ident: ident || null,
+    airport: airport || null,
+    runway: runway || null,
+    transition: transition || null,
+    displayLabel: parts.join(" ") || ident || transition || runway || `${category} procedure`
+  };
+}
+
+function deriveProcedureDisplayFromFeature(feature) {
+  return deriveProcedureDisplayFromProps({
+    procedureId: feature.get("procedureId") ?? feature.get("id"),
+    id: feature.get("id"),
+    procedureType: feature.get("procedureType") ?? feature.get("routeType"),
+    procedureName: feature.get("procedureName"),
+    name: feature.get("name"),
+    ident: feature.get("ident"),
+    transitionId: feature.get("transitionId"),
+    runwayId: feature.get("runwayId"),
+    airportId: feature.get("airportId"),
+    fixIdent: feature.get("fixIdent"),
+    fixId: feature.get("fixId")
+  });
+}
+
+function procedureMatchesFilters(meta) {
+  if (procedureUiState.airport !== "all" && meta.airport !== procedureUiState.airport) return false;
+  if (procedureUiState.runway !== "all" && meta.runway !== procedureUiState.runway) return false;
+  if (procedureUiState.type !== "all" && meta.category !== procedureUiState.type) return false;
+  return true;
+}
+
+function procedureIsSelected(meta) {
+  return procedureUiState.selected !== "all" && meta.key === procedureUiState.selected;
+}
+
+function setSelectOptions(selectEl, values, currentValue = "all", formatter = (value) => value) {
+  if (!selectEl) return;
+  selectEl.innerHTML = "";
+  const all = document.createElement("option");
+  all.value = "all";
+  all.textContent = "all";
+  selectEl.appendChild(all);
+  for (const value of values) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = formatter(value);
+    selectEl.appendChild(option);
+  }
+  selectEl.value = values.includes(currentValue) || currentValue === "all" ? currentValue : "all";
+}
+
+function refreshProcedureControls() {
+  const catalog = procedureUiState.catalog.slice();
+  setSelectOptions(procAirportEl, [...new Set(catalog.map((item) => item.airport).filter(Boolean))].sort((a, b) => a.localeCompare(b)), procedureUiState.airport);
+  setSelectOptions(procRunwayEl, [...new Set(catalog.map((item) => item.runway).filter(Boolean))].sort((a, b) => a.localeCompare(b)), procedureUiState.runway);
+
+  const filtered = catalog.filter((item) => {
+    if (procedureUiState.airport !== "all" && item.airport !== procedureUiState.airport) return false;
+    if (procedureUiState.runway !== "all" && item.runway !== procedureUiState.runway) return false;
+    if (procedureUiState.type !== "all" && item.category !== procedureUiState.type) return false;
+    return true;
+  });
+
+  if (procSelectEl) {
+    const current = procedureUiState.selected || "all";
+    procSelectEl.innerHTML = "";
+    const all = document.createElement("option");
+    all.value = "all";
+    all.textContent = "all";
+    procSelectEl.appendChild(all);
+    for (const item of filtered.sort((a, b) => a.displayLabel.localeCompare(b.displayLabel))) {
+      const option = document.createElement("option");
+      option.value = item.key;
+      option.textContent = item.displayLabel;
+      procSelectEl.appendChild(option);
+    }
+    procSelectEl.value = filtered.some((item) => item.key === current) || current === "all" ? current : "all";
+    if (procSelectEl.value !== current) procedureUiState.selected = procSelectEl.value;
+  }
+}
+
+function refreshProcedureRendering() {
+  procedureUiState.show = Boolean(procShowEl?.checked);
+  procedureUiState.airport = procAirportEl?.value || "all";
+  procedureUiState.runway = procRunwayEl?.value || "all";
+  procedureUiState.type = procTypeEl?.value || "all";
+  procedureUiState.selected = procSelectEl?.value || "all";
+  refreshProcedureControls();
+  if (tileLayer) tileLayer.changed();
+}
+
+async function pickReachableIndexUrl(candidates) {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      const r = await fetch(candidate);
+      if (r.ok) return candidate;
+    } catch {
+      // try next
+    }
+  }
+  return null;
+}
+
+async function resolveRemoteIndexUrlFromSelectedJson(doc) {
+  const candidates = [];
+  const dataset = String(doc?.dataset || "").trim();
+  if (dataset) {
+    candidates.push(`/artifacts/${dataset}/visualization.index.json`);
+    candidates.push(`/artifacts/${dataset.toLowerCase()}/visualization.index.json`);
+    candidates.push(`/artifacts/${dataset.toUpperCase()}/visualization.index.json`);
+    candidates.push(`/data/${dataset}/visualization.index.json`);
+    candidates.push(`/data/${dataset.toLowerCase()}/visualization.index.json`);
+    candidates.push(`/data/${dataset.toUpperCase()}/visualization.index.json`);
+  }
+  candidates.push("/artifacts/visualization.index.json", "/data/visualization.index.json");
+  return pickReachableIndexUrl(candidates);
+}
+
+function issueStyle(feature) {
+  if (qaShowIssuesEl && !qaShowIssuesEl.checked) return null;
+  const severity = String(feature.get("severity") || "warning").toLowerCase();
+  const type = String(feature.get("type") || "").toLowerCase();
+  if (issueFilterSeverity !== "all" && severity !== issueFilterSeverity) return null;
+  if (issueFilterType !== "all" && type !== issueFilterType) return null;
+  return severity === "error" ? issueErrorStyle : issueWarningStyle;
+}
+
+function ensureIssueLayer() {
+  if (issueLayer) return;
+  issueSource = new VectorSource();
+  issueLayer = new VectorLayer({
+    source: issueSource,
+    style: issueStyle
+  });
+  map.addLayer(issueLayer);
+}
+
+function ensureIssueHighlightLayer() {
+  if (issueHighlightLayer) return;
+  issueHighlightSource = new VectorSource();
+  issueHighlightLayer = new VectorLayer({
+    source: issueHighlightSource,
+    style: new Style({
+      stroke: new Stroke({ color: "rgba(255, 214, 0, 0.95)", width: 3, lineDash: [8, 4] }),
+      fill: new Fill({ color: "rgba(255, 214, 0, 0.09)" }),
+      image: new CircleStyle({
+        radius: 8,
+        fill: new Fill({ color: "rgba(255, 214, 0, 0.5)" }),
+        stroke: new Stroke({ color: "rgba(255,255,255,0.95)", width: 2 })
+      }),
+      zIndex: 995
+    })
+  });
+  map.addLayer(issueHighlightLayer);
+}
+
+function updateIssueStats() {
+  if (!qaStatsEl) return;
+  const total = issueFeaturesRaw.length;
+  const errors = issueFeaturesRaw.filter((f) => String(f.properties?.severity || "").toLowerCase() === "error").length;
+  const warnings = issueFeaturesRaw.filter((f) => String(f.properties?.severity || "").toLowerCase() === "warning").length;
+  qaStatsEl.textContent = `issues: ${total} | errors: ${errors} | warnings: ${warnings}`;
+}
+
+function refreshIssueTypeOptions() {
+  if (!qaTypeEl) return;
+  const types = [...new Set(issueFeaturesRaw.map((f) => String(f.properties?.type || "").toLowerCase()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+  const current = qaTypeEl.value || "all";
+  qaTypeEl.innerHTML = "";
+  const optAll = document.createElement("option");
+  optAll.value = "all";
+  optAll.textContent = "all";
+  qaTypeEl.appendChild(optAll);
+  for (const t of types) {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    qaTypeEl.appendChild(opt);
+  }
+  qaTypeEl.value = types.includes(current) || current === "all" ? current : "all";
+}
+
+function renderIssueInspector(feature) {
+  if (!issueInspectorEl) return;
+  if (!feature) {
+    issueInspectorEl.style.display = "none";
+    issueInspectorEl.innerHTML = "";
+    return;
+  }
+  issueInspectorEl.style.display = "block";
+  issueInspectorEl.innerHTML = `
+    <div><strong>Issue</strong></div>
+    <div><strong>severity:</strong> ${String(feature.get("severity") || "n/a")}</div>
+    <div><strong>type:</strong> ${String(feature.get("type") || "n/a")}</div>
+    <div><strong>entity:</strong> ${String(feature.get("relatedEntityId") || "n/a")}</div>
+    <div><strong>message:</strong> ${String(feature.get("message") || "n/a")}</div>
+  `;
+}
+
+function highlightRelatedEntity(issueFeature) {
+  ensureIssueHighlightLayer();
+  issueHighlightSource.clear();
+  if (!issueFeature) return;
+
+  const bbox = issueFeature.get("bbox");
+  const highlight = new Feature();
+  if (Array.isArray(bbox) && bbox.length === 4 && bbox.every(Number.isFinite)) {
+    const [minLon, minLat, maxLon, maxLat] = bbox;
+    const ring = [[minLon, minLat], [maxLon, minLat], [maxLon, maxLat], [minLon, maxLat], [minLon, minLat]];
+    const geom = new Polygon([ring]).transform("EPSG:4326", "EPSG:3857");
+    highlight.setGeometry(geom);
+    issueHighlightSource.addFeature(highlight);
+    map.getView().fit(geom.getExtent(), { duration: 350, padding: [36, 36, 36, 36], maxZoom: 11 });
+    return;
+  }
+
+  const geom = issueFeature.getGeometry();
+  if (geom instanceof Point) {
+    const center = geom.getCoordinates();
+    const circle = new CircleGeom(center, 9000);
+    highlight.setGeometry(circle);
+    issueHighlightSource.addFeature(highlight);
+    map.getView().fit(circle.getExtent(), { duration: 300, padding: [36, 36, 36, 36], maxZoom: 10 });
+  }
+}
+
+function applyIssueFilters() {
+  issueFilterSeverity = qaSeverityEl?.value || "all";
+  issueFilterType = qaTypeEl?.value || "all";
+  if (issueLayer) issueLayer.changed();
 }
 
 function renderInspectorFeature(feature) {
@@ -490,6 +831,152 @@ async function load2DTilesIndexFromLocalSelection() {
     tilesIndex: JSON.parse(await directIdx.text()),
     tilesIndexPath: directIdx.webkitRelativePath || directIdx.name || "tiles/index.json"
   };
+}
+
+function issueFeatureCollectionToOl(geojson) {
+  const format = new GeoJSON({ dataProjection: "EPSG:4326", featureProjection: "EPSG:3857" });
+  return format.readFeatures(geojson, {
+    dataProjection: "EPSG:4326",
+    featureProjection: "EPSG:3857"
+  });
+}
+
+async function tryLoadIssueGeoJsonRemote(baseIndexUrl, visualizationIndex = null) {
+  const candidates = [];
+  if (visualizationIndex?.outputs?.qa?.issues) {
+    candidates.push(new URL(visualizationIndex.outputs.qa.issues, baseIndexUrl).toString());
+  }
+  candidates.push(new URL("./analysis/issues.geojson", baseIndexUrl).toString());
+
+  for (const url of candidates) {
+    try {
+      const r = await fetch(url);
+      if (r.status === 404) continue;
+      if (!r.ok) continue;
+      const json = await r.json();
+      if (json?.type === "FeatureCollection") return { url, json };
+    } catch {
+      // keep trying
+    }
+  }
+  return null;
+}
+
+async function tryLoadProcedureCatalogRemote(loaded, indexUrl) {
+  const candidates = [];
+  if (loaded?.visualizationIndexUrl) candidates.push(new URL("./features.json", loaded.visualizationIndexUrl).toString());
+  if (loaded?.tilesIndexUrl) candidates.push(new URL("../features.json", loaded.tilesIndexUrl).toString());
+  if (indexUrl) candidates.push(new URL("./features.json", indexUrl).toString());
+
+  for (const url of candidates) {
+    try {
+      const r = await fetch(url);
+      if (r.status === 404) continue;
+      if (!r.ok) continue;
+      const json = await r.json();
+      if (!Array.isArray(json?.features)) continue;
+      return {
+        url,
+        catalog: json.features
+          .filter((feature) => isProcedureLayerName(feature.layer))
+          .map((feature) => deriveProcedureDisplayFromProps(feature.properties ?? feature))
+      };
+    } catch {
+      // continue
+    }
+  }
+  return null;
+}
+
+async function tryLoadProcedureCatalogLocal() {
+  const file = findLocalFile("features.json");
+  if (!file) return null;
+  try {
+    const json = JSON.parse(await file.text());
+    if (!Array.isArray(json?.features)) return null;
+    return {
+      name: file.name,
+      catalog: json.features
+        .filter((feature) => isProcedureLayerName(feature.layer))
+        .map((feature) => deriveProcedureDisplayFromProps(feature.properties ?? feature))
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function loadProcedureCatalogRemote(loaded, indexUrl) {
+  const resolved = await tryLoadProcedureCatalogRemote(loaded, indexUrl);
+  procedureUiState.catalog = resolved?.catalog ?? [];
+  refreshProcedureControls();
+  if (resolved) debugLog("procedure catalog loaded", { url: resolved.url, count: procedureUiState.catalog.length });
+}
+
+async function loadProcedureCatalogLocal() {
+  const resolved = await tryLoadProcedureCatalogLocal();
+  procedureUiState.catalog = resolved?.catalog ?? [];
+  refreshProcedureControls();
+  if (resolved) debugLog("procedure catalog loaded from local files", { name: resolved.name, count: procedureUiState.catalog.length });
+}
+
+async function tryLoadIssueGeoJsonLocal(visualizationIndex = null) {
+  const refs = [];
+  if (visualizationIndex?.outputs?.qa?.issues) refs.push(visualizationIndex.outputs.qa.issues);
+  refs.push("./analysis/issues.geojson", "analysis/issues.geojson", "issues.geojson");
+
+  for (const ref of refs) {
+    const normalized = String(ref).replace(/^\.\/+/, "");
+    const file = findLocalFile(normalized);
+    if (!file) continue;
+    try {
+      const json = JSON.parse(await file.text());
+      if (json?.type === "FeatureCollection") return { name: file.name, json };
+    } catch {
+      // continue
+    }
+  }
+  return null;
+}
+
+async function loadIssueLayerRemote(loaded, indexUrl) {
+  ensureIssueLayer();
+  const base = loaded.visualizationIndexUrl || loaded.tilesIndexUrl || indexUrl;
+  const issueLoaded = await tryLoadIssueGeoJsonRemote(base, loaded.visualizationIndex);
+  if (!issueLoaded) {
+    issueFeaturesRaw = [];
+    issueSource.clear();
+    refreshIssueTypeOptions();
+    updateIssueStats();
+    debugLog("qa issues not found for remote dataset");
+    return;
+  }
+  issueFeaturesRaw = issueLoaded.json.features ?? [];
+  issueSource.clear();
+  issueSource.addFeatures(issueFeatureCollectionToOl(issueLoaded.json));
+  refreshIssueTypeOptions();
+  updateIssueStats();
+  applyIssueFilters();
+  debugLog("qa issues loaded", { url: issueLoaded.url, issueCount: issueFeaturesRaw.length });
+}
+
+async function loadIssueLayerLocal(visualizationIndex = null) {
+  ensureIssueLayer();
+  const issueLoaded = await tryLoadIssueGeoJsonLocal(visualizationIndex);
+  if (!issueLoaded) {
+    issueFeaturesRaw = [];
+    issueSource.clear();
+    refreshIssueTypeOptions();
+    updateIssueStats();
+    debugLog("qa issues not found in local selection");
+    return;
+  }
+  issueFeaturesRaw = issueLoaded.json.features ?? [];
+  issueSource.clear();
+  issueSource.addFeatures(issueFeatureCollectionToOl(issueLoaded.json));
+  refreshIssueTypeOptions();
+  updateIssueStats();
+  applyIssueFilters();
+  debugLog("qa issues loaded from local files", { name: issueLoaded.name, issueCount: issueFeaturesRaw.length });
 }
 
 function createTileLayer(config) {
@@ -767,6 +1254,8 @@ async function loadFromRemoteIndex(indexUrl) {
     fitBoundsIfPresent(tilesIndex.bounds, Number(tilesIndex.minZoom));
   }
   debugSummary("remote index loaded");
+  await loadProcedureCatalogRemote(loaded, indexUrl);
+  await loadIssueLayerRemote(loaded, indexUrl);
   setStatus(`Loaded 2D tiles index (${loaded.source}): ${tilesIndexUrl}`);
 }
 
@@ -841,6 +1330,8 @@ async function loadFromLocalSelection() {
     fitBoundsIfPresent(tilesIndex.bounds, Number(tilesIndex.minZoom));
   }
   debugSummary("local index loaded");
+  await loadProcedureCatalogLocal();
+  await loadIssueLayerLocal(loaded.visualizationIndex);
   setStatus(`Loaded local 2D index with ${localTileFiles.size} files.`);
 }
 
@@ -857,7 +1348,12 @@ async function loadTiles() {
     }
     await loadFromRemoteIndex(indexUrl);
   } catch (err) {
-    setStatus(`Failed to load index: ${err?.message || err}`);
+    const msg = String(err?.message || err);
+    if (msg.includes("Cannot find local 2D index file referenced by visualization index")) {
+      setStatus("Index file selected without dataset folder context. Select the dataset folder that contains visualization.index.json.");
+      return;
+    }
+    setStatus(`Failed to load index: ${msg}`);
   }
 }
 
@@ -865,52 +1361,66 @@ loadBtn.addEventListener("click", () => {
   void loadTiles();
 });
 
-pickTilesDirBtn.addEventListener("click", () => {
-  tilesDirInput.value = "";
-  tilesDirInput.click();
-});
-
 pickIndexFileBtn.addEventListener("click", () => {
   indexFileInput.value = "";
   indexFileInput.click();
 });
 
-tilesDirInput.addEventListener("change", async (ev) => {
-  const files = Array.from(ev.target.files || []);
-  localTileFiles = new Map();
-
-  for (const f of files) {
-    const relRaw = String(f.webkitRelativePath || f.name).replaceAll("\\\\", "/");
-    const relNoRoot = relRaw.includes("/") ? relRaw.slice(relRaw.indexOf("/") + 1) : relRaw;
-    localTileFiles.set(relNoRoot, f);
-    localTileFiles.set(f.name, f);
-
-    if (/visualization\.index\.json$/i.test(relNoRoot) || /(^|\/)tiles\/index\.json$/i.test(relNoRoot)) {
-      localIndexFile = f;
-    }
-  }
-
-  if (localTileFiles.size === 0) {
-    setStatus("No files found in selected folder.");
-    return;
-  }
-  const indexName = localIndexFile?.name || "none";
-  setStatus(`Selected local folder with ${files.length} files (index: ${indexName}).`);
-  void loadTiles();
-});
-
 indexFileInput.addEventListener("change", async (ev) => {
   const file = ev.target.files?.[0];
   if (!file) return;
-  localIndexFile = file;
   try {
-    JSON.parse(await file.text());
-    setStatus(`Loaded local index file: ${file.name}`);
+    const parsed = JSON.parse(await file.text());
+    const resolved = await resolveRemoteIndexUrlFromSelectedJson(parsed);
+    if (!resolved) {
+      setStatus("Cannot resolve served dataset URL from selected file. Use index URL manually (e.g. /artifacts/<dataset>/visualization.index.json).");
+      return;
+    }
+    indexUrlEl.value = resolved;
+    setStatus(`Resolved index URL: ${resolved}`);
   } catch (err) {
     setStatus(`Invalid index file: ${err?.message || err}`);
     return;
   }
   void loadTiles();
+});
+
+qaShowIssuesEl?.addEventListener("change", () => {
+  if (issueLayer) issueLayer.changed();
+});
+procShowEl?.addEventListener("change", () => {
+  refreshProcedureRendering();
+});
+procAirportEl?.addEventListener("change", () => {
+  refreshProcedureRendering();
+});
+procRunwayEl?.addEventListener("change", () => {
+  refreshProcedureRendering();
+});
+procTypeEl?.addEventListener("change", () => {
+  refreshProcedureRendering();
+});
+procSelectEl?.addEventListener("change", () => {
+  refreshProcedureRendering();
+});
+qaSeverityEl?.addEventListener("change", () => {
+  applyIssueFilters();
+});
+qaTypeEl?.addEventListener("change", () => {
+  applyIssueFilters();
+});
+
+map.on("singleclick", (evt) => {
+  let issueFeature = null;
+  map.forEachFeatureAtPixel(evt.pixel, (feature) => {
+    if (feature.get("severity")) {
+      issueFeature = feature;
+      return true;
+    }
+    return false;
+  });
+  renderIssueInspector(issueFeature);
+  highlightRelatedEntity(issueFeature);
 });
 
 if (debugEnabled) {
@@ -951,4 +1461,8 @@ if (debugEnabled) {
   });
 }
 
-void loadTiles();
+if (params.get("index")) {
+  void loadTiles();
+} else {
+  setStatus("Select visualization.index.json or paste index URL, then click Load.");
+}

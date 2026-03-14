@@ -1,0 +1,41 @@
+{
+  "name": "@arinc424/procedures",
+  "version": "0.1.5",
+  "description": "Attachment 5 phase 1 procedure leg decoding and geometry helpers.",
+  "type": "module",
+  "license": "MIT",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mploscos/arinc424-toolkit.git",
+    "directory": "packages/procedures"
+  },
+  "homepage": "https://github.com/mploscos/arinc424-toolkit#readme",
+  "bugs": {
+    "url": "https://github.com/mploscos/arinc424-toolkit/issues"
+  },
+  "keywords": [
+    "arinc424",
+    "aviation",
+    "procedures",
+    "attachment5"
+  ],
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "dependencies": {
+    "@arinc424/core": "0.1.5"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "test:golden": "node -e \"console.log('No golden tests for @arinc424/procedures')\"",
+    "bench": "node -e \"console.log('No benchmark yet for @arinc424/procedures')\""
+  }
+}

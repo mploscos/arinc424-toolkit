@@ -64,15 +64,53 @@
         <button id="load" type="button">Load</button>
       </div>
       <div class="row">
-        <button id="pick3dDir" type="button">Select 3dtiles folder</button>
-        <button id="pickIndexFile" type="button">Select index JSON</button>
+        <button id="pickIndexFile" type="button">Select visualization.index.json</button>
       </div>
-      <div style="font-size:11px; opacity:0.8">URL supports <code>visualization.index.json</code> or <code>3dtiles/index.json</code></div>
+      <div style="font-size:11px; opacity:0.8">Use URL or select <code>visualization.index.json</code></div>
       <div style="font-size:11px; opacity:0.8">Add <code>&debug=1</code> for index/tileset load traces.</div>
+      <div style="font-size:11px; opacity:0.8">Basemap mode: <code>?basemap=muted</code> (default) or <code>?basemap=standard</code></div>
+      <div style="font-size:11px; margin-top:8px; border-top:1px solid #d9e2d9; padding-top:6px">
+        <div><strong>Procedures</strong></div>
+        <label><input id="procShow" type="checkbox" /> show procedures</label><br />
+        <label for="procAirport">airport</label>
+        <select id="procAirport">
+          <option value="all">all</option>
+        </select>
+        <label for="procRunway">runway</label>
+        <select id="procRunway">
+          <option value="all">all</option>
+        </select><br />
+        <label for="procType">type</label>
+        <select id="procType">
+          <option value="all">all</option>
+          <option value="SID">SID</option>
+          <option value="STAR">STAR</option>
+          <option value="APPROACH">APPROACH</option>
+        </select>
+        <label for="procSelect">procedure</label>
+        <select id="procSelect">
+          <option value="all">all</option>
+        </select>
+      </div>
+      <div style="font-size:11px; margin-top:8px; border-top:1px solid #d9e2d9; padding-top:6px">
+        <div><strong>Visual QA</strong></div>
+        <label><input id="qaShowIssues" type="checkbox" checked /> show issues</label><br />
+        <label for="qaSeverity">severity</label>
+        <select id="qaSeverity">
+          <option value="all">all</option>
+          <option value="error">error</option>
+          <option value="warning">warning</option>
+        </select>
+        <label for="qaType">type</label>
+        <select id="qaType">
+          <option value="all">all</option>
+        </select>
+        <div id="qaStats" style="margin-top:4px; opacity:0.85"></div>
+      </div>
       <div id="status"></div>
+      <div id="issueInspector" style="display:none; font-size:11px; margin-top:8px; max-height:220px; overflow:auto; border-top:1px solid #d9e2d9; padding-top:6px"></div>
     </div>
     <div id="cesiumContainer"></div>
-    <input id="threeDDirInput" type="file" webkitdirectory directory multiple hidden />
     <input id="indexFileInput" type="file" accept=".json,application/json" hidden />
 
     <script src="https://cdn.jsdelivr.net/npm/cesium@1.126.0/Build/Cesium/Cesium.js"></script>

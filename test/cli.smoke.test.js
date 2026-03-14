@@ -69,4 +69,21 @@ test("cli smoke: analysis commands", () => {
   r = run(["query", features, "--layer", "airways", "--json"], cwd);
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /airway/);
+
+  r = run(["inspect-procedure", path.join(cwd, "test/golden/procedure/canonical.golden.json"), "PRC1", "--json"], cwd);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /\"kind\": \"procedure\"/);
+
+  r = run(["procedure-geometry", path.join(cwd, "test/golden/procedure/canonical.golden.json"), "PRC1", "--json"], cwd);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /\"procedureId\":/);
+  assert.match(r.stdout, /\"pathTerminator\": \"(IF|TF|CF|DF)\"/);
+
+  r = run(["related", path.join(cwd, "test/golden/procedure/canonical.golden.json"), "--airport", "KPRC", "--relation", "procedureIds", "--json"], cwd);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /procedure:PD:/);
+
+  r = run(["validate-relations", canonical, "--json"], cwd);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /\"valid\": true/);
 });

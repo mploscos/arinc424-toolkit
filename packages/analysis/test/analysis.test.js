@@ -6,8 +6,13 @@ import {
   inspectAirspace,
   inspectAirport,
   inspectWaypoint,
+  inspectProcedure,
   queryEntities,
+  queryRelated,
   buildLookups,
+  buildRelations,
+  validateCrossEntityConsistency,
+  buildIssueFeatures,
   formatSummary
 } from "../src/index.js";
 
@@ -18,8 +23,13 @@ test("analysis package exports are available", () => {
     inspectAirspace,
     inspectAirport,
     inspectWaypoint,
+    inspectProcedure,
     queryEntities,
+    queryRelated,
     buildLookups,
+    buildRelations,
+    validateCrossEntityConsistency,
+    buildIssueFeatures,
     formatSummary
   ]) {
     assert.equal(typeof fn, "function");

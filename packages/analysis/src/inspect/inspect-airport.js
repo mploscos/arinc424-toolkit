@@ -1,5 +1,6 @@
 import { validateCanonicalModel } from "@arinc424/core";
 import { buildLookups } from "../relations/build-lookups.js";
+import { buildRelations } from "../relations/build-relations.js";
 
 function haversineKm(a, b) {
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -37,8 +38,28 @@ export function inspectAirport(canonicalModel, idOrIdent) {
   if (!airport) return { found: false, input: idOrIdent, kind: "airport", warnings: ["Airport not found"] };
 
   const lookups = buildLookups(canonicalModel);
-  const runways = [...(lookups.runwaysByAirportId.get(airport.id) ?? [])].sort((a, b) => String(a.id).localeCompare(String(b.id)));
-  const procedures = [...(lookups.proceduresByAirportId.get(airport.id) ?? [])].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  const relations = buildRelations(canonicalModel);
+  const relationRow = relations.airportRelations[airport.id] ?? {
+    runwayIds: [],
+    procedureIds: [],
+    terminalWaypointIds: []
+  };
+
+  const runways = relationRow.runwayIds
+    .map((id) => lookups.runwaysById.get(id))
+    .filter(Boolean)
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  const procedures = relationRow.procedureIds
+    .map((id) => lookups.proceduresById.get(id))
+    .filter(Boolean)
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  const terminalWaypoints = relationRow.terminalWaypointIds
+    .map((id) => lookups.waypointsById.get(id) ?? lookups.navaidsById.get(id))
+    .filter(Boolean)
+    .map((x) => ({ id: x.id, ident: x.ident ?? null, type: x.type ?? null }))
+    .sort((a, b) => a.id.localeCompare(b.id));
 
   const coord = Array.isArray(airport.coord) ? airport.coord : null;
   const nearbyWaypoints = (canonicalModel.entities.waypoints ?? [])
@@ -65,7 +86,13 @@ export function inspectAirport(canonicalModel, idOrIdent) {
     relatedEntities: {
       runways: runways.map((r) => ({ id: r.id, runwayDesignator: r.runwayDesignator ?? null })),
       procedures: procedures.map((p) => ({ id: p.id, procedureType: p.procedureType ?? null })),
+      terminalWaypoints,
       nearbyWaypoints
+    },
+    relationSummary: {
+      runwayCount: runways.length,
+      procedureCount: procedures.length,
+      terminalWaypointCount: terminalWaypoints.length
     },
     warnings: []
   };

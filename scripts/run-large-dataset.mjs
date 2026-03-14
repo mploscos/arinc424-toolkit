@@ -6,6 +6,7 @@ import { parseArincFile, writeCanonicalModel } from "@arinc424/core";
 import { buildFeaturesFromCanonical, validateFeatureModel } from "@arinc424/features";
 import { generateTiles, writeTileManifest } from "@arinc424/tiles";
 import { build3DTilesFromFeatures } from "@arinc424/3dtiles";
+import { validateCrossEntityConsistency, buildIssueFeatures } from "@arinc424/analysis";
 
 function parseArgs(argv) {
   const args = {
@@ -227,6 +228,11 @@ function toMarkdown(report) {
   for (const [k, v] of Object.entries(report.stages.features.featureCountsByLayer)) lines.push(`  - ${k}: ${v}`);
   lines.push("");
 
+  lines.push("## Analysis QA");
+  lines.push(`- Relation consistency: ${report.stages.analysis.valid ? "valid" : "invalid"}`);
+  lines.push(`- Issues: ${report.stages.analysis.issueCount} (errors: ${report.stages.analysis.errorCount}, warnings: ${report.stages.analysis.warningCount})`);
+  lines.push("");
+
   lines.push("## Tiles");
   if (report.stages.tiles.skipped) {
     lines.push("- Skipped");
@@ -273,6 +279,7 @@ function toReadmeSnippet(report) {
   lines.push("Summary:");
   lines.push(`- Canonical: ${report.stages.canonical.durationMs.toFixed(2)} ms, ${report.stages.canonical.totalEntities} entities`);
   lines.push(`- Features: ${report.stages.features.durationMs.toFixed(2)} ms, ${report.stages.features.totalFeatureCount} features`);
+  lines.push(`- Analysis issues: ${report.stages.analysis.issueCount} (errors: ${report.stages.analysis.errorCount}, warnings: ${report.stages.analysis.warningCount})`);
   if (!report.stages.tiles.skipped) {
     lines.push(`- Tiles: ${report.stages.tiles.durationMs.toFixed(2)} ms, ${report.stages.tiles.tileFileCount} files (${report.stages.tiles.minZoom}..${report.stages.tiles.maxZoom})`);
   }
@@ -296,6 +303,7 @@ async function main() {
   const featuresPath = path.join(args.out, "features.json");
   const tilesDir = path.join(args.out, "tiles");
   const threeDTilesDir = path.join(args.out, "3dtiles");
+  const analysisDir = path.join(args.out, "analysis");
 
   const report = {
     run: {
@@ -350,6 +358,17 @@ async function main() {
     featureCountsByLayer: countBy(featureModel.features, (f) => f.layer)
   };
 
+  const consistency = validateCrossEntityConsistency(canonical);
+  const issues = buildIssueFeatures(canonical, consistency);
+  writeJson(path.join(analysisDir, "consistency.json"), consistency);
+  writeJson(path.join(analysisDir, "issues.geojson"), issues);
+  report.stages.analysis = {
+    valid: consistency.valid,
+    errorCount: consistency.errors.length,
+    warningCount: consistency.warnings.length,
+    issueCount: issues.summary?.issueCount ?? issues.features?.length ?? 0
+  };
+
   if (args.skipTiles) {
     report.stages.tiles = { skipped: true, reason: "--skip-tiles" };
   } else {
@@ -400,6 +419,11 @@ async function main() {
   const snippetPath = path.join(args.out, "readme-snippet.md");
   const bounds = computeBoundsFromFeatures(featureModel.features);
   const outputs = {};
+  outputs.qa = {
+    type: "analysis-issues",
+    consistency: "./analysis/consistency.json",
+    issues: "./analysis/issues.geojson"
+  };
 
   if (!report.stages.tiles.skipped) {
     const tilesIndexPath = path.join(tilesDir, "index.json");
