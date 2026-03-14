@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildFeaturesFromCanonical } from "@arinc424/features";
+import { features as toolkitFeatures } from "@arinc424/toolkit";
 
 test("workspace package resolution works", () => {
   const canonical = {
@@ -11,4 +12,5 @@ test("workspace package resolution works", () => {
   };
   const model = buildFeaturesFromCanonical(canonical);
   assert.equal(model.schema, "arinc-feature-model");
+  assert.equal(typeof toolkitFeatures.buildFeaturesFromCanonical, "function");
 });

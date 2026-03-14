@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.1.2 - 2026-03-14
+
+### Added
+- New convenience metapackage: `@arinc424/toolkit`.
+- npm install guidance for single-package (`toolkit`) and modular installs.
+
+### Changed
+- Workspace package versions aligned to `0.1.2`.
+- Internal workspace dependency versions aligned to `0.1.2`.
+- Documentation alignment for release `0.1.2`.
+
 ## 0.1.1 - 2026-03-14
 
 ### Changed

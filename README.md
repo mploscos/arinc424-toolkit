@@ -4,11 +4,26 @@ Modular Node.js platform for ARINC 424 ingestion, canonical normalization, featu
 
 ## Packages
 
+- `@arinc424/toolkit`: convenience metapackage (single install entrypoint)
 - `@arinc424/core`: ARINC parsing + canonical model
 - `@arinc424/features`: canonical -> feature model
 - `@arinc424/tiles`: grouped GeoJSON + `z/x/y.json` tiling + manifest
 - `@arinc424/3dtiles`: 3D tiles build pipeline driven by feature model input
 - `@arinc424/view`: OpenLayers/Cesium adapters and examples
+
+## Install from npm
+
+Single package:
+
+```bash
+npm install @arinc424/toolkit
+```
+
+Modular install:
+
+```bash
+npm install @arinc424/core @arinc424/features @arinc424/tiles @arinc424/3dtiles @arinc424/view
+```
 
 ## Workspace commands
 
@@ -25,6 +40,37 @@ arinc features <canonical.json> <features.json>
 arinc tiles <features.json> <outDir> [--min-zoom N --max-zoom N]
 arinc 3dtiles <features.json> <outDir>
 ```
+
+## Quick Start
+
+Run the full pipeline from one ARINC file:
+
+```bash
+# 1) ARINC -> canonical
+arinc parse ./data/FAACIFP18.dat ./artifacts/demo/canonical.json
+
+# 2) canonical -> features
+arinc features ./artifacts/demo/canonical.json ./artifacts/demo/features.json
+
+# 3) features -> tiled GeoJSON
+arinc tiles ./artifacts/demo/features.json ./artifacts/demo/tiles --min-zoom 4 --max-zoom 10
+
+# 4) features -> 3D Tiles
+arinc 3dtiles ./artifacts/demo/features.json ./artifacts/demo/3dtiles
+```
+
+Programmatic entrypoint (metapackage):
+
+```js
+import { core, features, tiles, threeDTiles } from "@arinc424/toolkit";
+
+const canonical = await core.parseArincFile("./data/FAACIFP18.dat");
+const featureModel = features.buildFeaturesFromCanonical(canonical);
+await tiles.generateTiles(featureModel, { outDir: "./artifacts/demo/tiles", minZoom: 4, maxZoom: 10 });
+await threeDTiles.build3DTilesFromFeatures(featureModel, { outDir: "./artifacts/demo/3dtiles" });
+```
+
+For full-run metrics and reporting on large datasets, see `docs/large-dataset.md`.
 
 ## Architecture Overview
 
@@ -64,9 +110,9 @@ See `docs/testing.md` for details.
 Cartography and styling notes: `docs/cartography.md`.
 ARINC UC/UR airspace boundary reconstruction notes: `docs/arinc-airspace-geometry.md`.
 
-## Release 0.1.1
+## Release 0.1.2
 
-Version `0.1.1` is the current public modular release with:
+Version `0.1.2` is the current public modular release with:
 
 - workspace package boundaries (`core` -> `features` -> `tiles`/`3dtiles` -> `view`)
 - contract-driven outputs (`canonical.json`, `features.json`, tile/3D tiles indexes)

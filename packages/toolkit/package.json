@@ -1,18 +1,17 @@
 {
-  "name": "@arinc424/core",
+  "name": "@arinc424/toolkit",
   "version": "0.1.2",
-  "description": "ARINC 424 parsing, canonical model generation, and canonical schema validation.",
+  "description": "Convenience metapackage bundling core, features, tiles, 3D tiles, and view APIs.",
   "type": "module",
   "license": "MIT",
   "main": "./src/index.js",
   "exports": {
-    ".": "./src/index.js",
-    "./schema": "./src/schema/index.js"
+    ".": "./src/index.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mploscos/arinc424-toolkit.git",
-    "directory": "packages/core"
+    "directory": "packages/toolkit"
   },
   "homepage": "https://github.com/mploscos/arinc424-toolkit#readme",
   "bugs": {
@@ -22,18 +21,26 @@
     "arinc424",
     "aviation",
     "navigation",
-    "canonical-model"
+    "monorepo",
+    "toolkit"
   ],
   "files": [
     "src",
     "README.md"
   ],
+  "dependencies": {
+    "@arinc424/3dtiles": "0.1.2",
+    "@arinc424/core": "0.1.2",
+    "@arinc424/features": "0.1.2",
+    "@arinc424/tiles": "0.1.2",
+    "@arinc424/view": "0.1.2"
+  },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "test": "node --test test/**/*.test.js",
-    "test:golden": "node --test test/**/*golden*.test.js",
-    "bench": "node bench/parse.bench.js"
+    "test:golden": "node -e \"console.log('No golden tests for @arinc424/toolkit')\"",
+    "bench": "node -e \"console.log('No benchmark for @arinc424/toolkit')\""
   }
 }
