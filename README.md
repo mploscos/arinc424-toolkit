@@ -67,6 +67,7 @@ import { core, features, tiles, threeDTiles } from "@arinc424/toolkit";
 const canonical = await core.parseArincFile("./data/FAACIFP18.dat");
 const featureModel = features.buildFeaturesFromCanonical(canonical);
 await tiles.generateTiles(featureModel, { outDir: "./artifacts/demo/tiles", minZoom: 4, maxZoom: 10 });
+await tiles.writeTileManifest(featureModel, { outDir: "./artifacts/demo/tiles" });
 await threeDTiles.build3DTilesFromFeatures(featureModel, { outDir: "./artifacts/demo/3dtiles" });
 ```
 
