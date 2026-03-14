@@ -2,7 +2,7 @@
 
 This project uses a pure Node.js tiling + OpenLayers rendering flow.
 
-## Geometry Simplification (`@arinc/tiles`)
+## Geometry Simplification (`@arinc424/tiles`)
 
 `generateTiles()` supports optional per-zoom simplification:
 
@@ -35,7 +35,7 @@ Defaults:
   - `6: 0.01`
   - `8: 0.001`
 
-## Layer Styling (`@arinc/view` OpenLayers example)
+## Layer Styling (`@arinc424/view` OpenLayers example)
 
 The viewer styles by `feature.properties.layer` (injected by the tiler), not only by entity type.
 

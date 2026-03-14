@@ -1,17 +1,39 @@
 {
-  "name": "@arinc/view",
-  "version": "0.1.0",
+  "name": "@arinc424/view",
+  "version": "0.1.1",
+  "description": "OpenLayers and Cesium visualization adapters and examples for ARINC outputs.",
   "type": "module",
+  "license": "MIT",
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mploscos/arinc424-toolkit.git",
+    "directory": "packages/view"
+  },
+  "homepage": "https://github.com/mploscos/arinc424-toolkit#readme",
+  "bugs": {
+    "url": "https://github.com/mploscos/arinc424-toolkit/issues"
+  },
+  "keywords": [
+    "arinc424",
+    "aviation",
+    "openlayers",
+    "cesium"
+  ],
+  "files": [
+    "src",
+    "examples",
+    "README.md"
+  ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "test": "node --test test/**/*.test.js",
-    "test:golden": "node -e \"console.log('No golden tests for @arinc/view')\"",
-    "bench": "node -e \"console.log('No benchmark for @arinc/view')\""
+    "test:golden": "node -e \"console.log('No golden tests for @arinc424/view')\"",
+    "bench": "node -e \"console.log('No benchmark for @arinc424/view')\""
   }
 }

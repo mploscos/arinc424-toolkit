@@ -1,13 +1,34 @@
 {
-  "name": "@arinc/3dtiles",
-  "version": "0.1.0",
+  "name": "@arinc424/3dtiles",
+  "version": "0.1.1",
+  "description": "Cesium 3D Tiles builder pipeline from ARINC-derived feature data.",
   "type": "module",
+  "license": "MIT",
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mploscos/arinc424-toolkit.git",
+    "directory": "packages/3dtiles"
+  },
+  "homepage": "https://github.com/mploscos/arinc424-toolkit#readme",
+  "bugs": {
+    "url": "https://github.com/mploscos/arinc424-toolkit/issues"
+  },
+  "keywords": [
+    "arinc424",
+    "aviation",
+    "3dtiles",
+    "cesium"
+  ],
+  "files": [
+    "src",
+    "README.md"
+  ],
   "dependencies": {
-    "@arinc/features": "0.1.0",
+    "@arinc424/features": "0.1.0",
     "earcut": "^3.0.2"
   },
   "publishConfig": {
@@ -16,6 +37,6 @@
   "scripts": {
     "test": "node --test test/**/*.test.js",
     "test:golden": "node --test test/**/*golden*.test.js",
-    "bench": "node -e \"console.log('No benchmark yet for @arinc/3dtiles')\""
+    "bench": "node -e \"console.log('No benchmark yet for @arinc424/3dtiles')\""
   }
 }

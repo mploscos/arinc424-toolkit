@@ -1,13 +1,34 @@
 {
-  "name": "@arinc/tiles",
-  "version": "0.1.0",
+  "name": "@arinc424/tiles",
+  "version": "0.1.1",
+  "description": "Pure Node.js tiling pipeline for ARINC-derived geospatial features.",
   "type": "module",
+  "license": "MIT",
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mploscos/arinc424-toolkit.git",
+    "directory": "packages/tiles"
+  },
+  "homepage": "https://github.com/mploscos/arinc424-toolkit#readme",
+  "bugs": {
+    "url": "https://github.com/mploscos/arinc424-toolkit/issues"
+  },
+  "keywords": [
+    "arinc424",
+    "aviation",
+    "tiles",
+    "geojson"
+  ],
+  "files": [
+    "src",
+    "README.md"
+  ],
   "dependencies": {
-    "@arinc/features": "0.1.0"
+    "@arinc424/features": "0.1.0"
   },
   "publishConfig": {
     "access": "public"

@@ -35,10 +35,10 @@ Optional flags:
 
 ## Stages exercised
 
-1. ARINC424 -> canonical model (`@arinc/core`)
-2. canonical -> feature model (`@arinc/features`)
-3. feature model -> tiled GeoJSON (`@arinc/tiles`)
-4. feature model -> 3D Tiles (`@arinc/3dtiles`)
+1. ARINC424 -> canonical model (`@arinc424/core`)
+2. canonical -> feature model (`@arinc424/features`)
+3. feature model -> tiled GeoJSON (`@arinc424/tiles`)
+4. feature model -> 3D Tiles (`@arinc424/3dtiles`)
 
 ## Generated outputs
 

@@ -6,11 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Workspace monorepo architecture with npm workspaces:
-  - `@arinc/core`
-  - `@arinc/features`
-  - `@arinc/tiles`
-  - `@arinc/3dtiles`
-  - `@arinc/view`
+  - `@arinc424/core`
+  - `@arinc424/features`
+  - `@arinc424/tiles`
+  - `@arinc424/3dtiles`
+  - `@arinc424/view`
 - End-to-end pipeline:
   - ARINC424 -> canonical model
   - canonical -> feature model

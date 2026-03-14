@@ -51,9 +51,9 @@ Lightweight benches are available and safe for local/CI optional runs.
 
 ```bash
 npm run bench
-npm run bench -w @arinc/core
-npm run bench -w @arinc/features
-npm run bench -w @arinc/tiles
+npm run bench -w @arinc424/core
+npm run bench -w @arinc424/features
+npm run bench -w @arinc424/tiles
 ```
 
 ## Release readiness checklist (v0.1.0)

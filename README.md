@@ -4,11 +4,11 @@ Modular Node.js platform for ARINC 424 ingestion, canonical normalization, featu
 
 ## Packages
 
-- `@arinc/core`: ARINC parsing + canonical model
-- `@arinc/features`: canonical -> feature model
-- `@arinc/tiles`: grouped GeoJSON + `z/x/y.json` tiling + manifest
-- `@arinc/3dtiles`: 3D tiles build pipeline driven by feature model input
-- `@arinc/view`: OpenLayers/Cesium adapters and examples
+- `@arinc424/core`: ARINC parsing + canonical model
+- `@arinc424/features`: canonical -> feature model
+- `@arinc424/tiles`: grouped GeoJSON + `z/x/y.json` tiling + manifest
+- `@arinc424/3dtiles`: 3D tiles build pipeline driven by feature model input
+- `@arinc424/view`: OpenLayers/Cesium adapters and examples
 
 ## Workspace commands
 
@@ -29,11 +29,11 @@ arinc 3dtiles <features.json> <outDir>
 ## Architecture Overview
 
 ```text
-ARINC424 -> @arinc/core -> canonical model
-          -> @arinc/features -> feature model
-          -> @arinc/tiles -> layers + clipped tiles + manifest
-          -> @arinc/3dtiles -> 3D tiles artifacts
-          -> @arinc/view -> demo adapters/viewers
+ARINC424 -> @arinc424/core -> canonical model
+          -> @arinc424/features -> feature model
+          -> @arinc424/tiles -> layers + clipped tiles + manifest
+          -> @arinc424/3dtiles -> 3D tiles artifacts
+          -> @arinc424/view -> demo adapters/viewers
 ```
 
 Dependency direction:
@@ -46,7 +46,7 @@ Dependency direction:
 
 ## Current scope notes
 
-- `@arinc/tiles` implements tile indexing + basic geometry clipping.
+- `@arinc424/tiles` implements tile indexing + basic geometry clipping.
 - Geometry simplification remains limited and is tracked as follow-up work.
 
 
@@ -103,7 +103,7 @@ It also writes a unified visualization contract:
 - `tiles/index.json`
 - `3dtiles/index.json`
 
-Viewers in `@arinc/view` can load the whole dataset using:
+Viewers in `@arinc424/view` can load the whole dataset using:
 - OpenLayers: `openlayers-tiles/?index=/data/visualization.index.json`
 - Cesium: `cesium-3dtiles/?index=/data/visualization.index.json`
 
