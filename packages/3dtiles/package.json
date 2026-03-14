@@ -1,6 +1,6 @@
 {
   "name": "@arinc424/3dtiles",
-  "version": "0.1.2",
+  "version": "0.1.1",
   "description": "Cesium 3D Tiles builder pipeline from ARINC-derived feature data.",
   "type": "module",
   "license": "MIT",

@@ -3,3 +3,4 @@ node_modules/
 artifacts/
 data/*.dat
 .npm-cache/
+.npmrc.publish
