@@ -312,14 +312,16 @@ function resolveSimplifyTolerance(zoom, toleranceByZoom) {
  * Generate tiled GeoJSON output at z/x/y.json.
  * Includes basic geometry clipping (Point/LineString/Polygon/MultiPolygon).
  * @param {{features: object[]}} featureModel
- * @param {{outDir:string,minZoom?:number,maxZoom?:number,generatedAt?:string|null,simplify?:boolean,simplifyTolerance?:Record<number,number>}} options
+ * @param {{outDir:string,minZoom?:number,maxZoom?:number,generatedAt?:string|null,simplify?:boolean,simplifyTolerance?:Record<number,number>,simplifyToleranceByZoom?:Record<number,number>}} options
  * @returns {{tileCount:number,manifest:object}}
  */
 export function generateTiles(featureModel, options) {
   const minZoom = options.minZoom ?? 4;
   const maxZoom = options.maxZoom ?? 10;
   const simplify = Boolean(options.simplify);
-  const simplifyTolerance = options.simplifyTolerance ?? DEFAULT_SIMPLIFY_TOLERANCE;
+  const simplifyToleranceByZoom = options.simplifyToleranceByZoom
+    ?? options.simplifyTolerance
+    ?? DEFAULT_SIMPLIFY_TOLERANCE;
   fs.mkdirSync(options.outDir, { recursive: true });
 
   const tiles = new Map();
@@ -345,7 +347,7 @@ export function generateTiles(featureModel, options) {
           if (!intersects(bbox, tb)) continue;
           const clipped = clipGeometryToTile(feature.geometry, tb);
           if (!clipped) continue;
-          const tolerance = simplify ? resolveSimplifyTolerance(z, simplifyTolerance) : 0;
+          const tolerance = simplify ? resolveSimplifyTolerance(z, simplifyToleranceByZoom) : 0;
           const maybeSimplified = simplifyGeometry(clipped, tolerance);
           if (!maybeSimplified) continue;
           const key = `${z}/${x}/${y}`;
@@ -384,7 +386,7 @@ export function generateTiles(featureModel, options) {
     tileCount: tiles.size,
     layers: [...new Set(sortedFeatures.map((f) => f.layer))].sort(),
     simplify,
-    simplifyTolerance: simplify ? simplifyTolerance : null
+    simplifyTolerance: simplify ? simplifyToleranceByZoom : null
   };
 
   return { tileCount: tiles.size, manifest };

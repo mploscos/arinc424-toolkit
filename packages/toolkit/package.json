@@ -1,6 +1,6 @@
 {
   "name": "@arinc424/toolkit",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Convenience metapackage bundling core, features, tiles, 3D tiles, and view APIs.",
   "type": "module",
   "license": "MIT",
@@ -29,11 +29,11 @@
     "README.md"
   ],
   "dependencies": {
-    "@arinc424/3dtiles": "0.1.2",
-    "@arinc424/core": "0.1.2",
-    "@arinc424/features": "0.1.2",
-    "@arinc424/tiles": "0.1.2",
-    "@arinc424/view": "0.1.2"
+    "@arinc424/3dtiles": "0.1.3",
+    "@arinc424/core": "0.1.3",
+    "@arinc424/features": "0.1.3",
+    "@arinc424/tiles": "0.1.3",
+    "@arinc424/view": "0.1.3"
   },
   "publishConfig": {
     "access": "public"

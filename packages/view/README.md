@@ -2,6 +2,14 @@
 
 Visualization adapters and examples for inspecting pipeline outputs.
 
+## Cartography Preparation
+
+- `packages/view/src/cartography/`
+  - `buildCartography(featureModel)` builds rendering-oriented descriptors (layer grouping, style hints, label candidates, zoom ranges, bounds).
+  - Keeps feature contracts unchanged while letting viewer behavior evolve independently.
+- `packages/view/src/debug/`
+  - `airspace-inspector.js` and `geometry-debug-overlay.js` for developer inspection overlays.
+
 ## Examples
 
 - `packages/view/examples/openlayers-tiles/`

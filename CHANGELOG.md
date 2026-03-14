@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.1.3 - 2026-03-14
+
+### Added
+- OpenLayers debug inspector modules for airspace inspection and geometry overlays.
+- Cartography preparation modules for viewer-side layer/style/label descriptors.
+
+### Changed
+- Workspace package versions aligned to `0.1.3`.
+- Internal workspace dependency versions aligned to `0.1.3`.
+- OpenLayers example now resolves all imports from example-local modules (static-server friendly).
+- OpenLayers tile loading reliability improved:
+  - sparse tile handling with `404` as empty tile
+  - fixed VectorTile loader flow for GeoJSON tiles
+  - continued support for index-driven loading (`visualization.index.json` / `tiles/index.json`)
+- Cesium example kept aligned with index-driven loading (`visualization.index.json` / `3dtiles/index.json`) and OSM base layer behavior.
+- README/testing docs aligned for release `0.1.3`.
+
 ## 0.1.2 - 2026-03-14
 
 ### Added

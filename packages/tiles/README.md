@@ -5,7 +5,7 @@ Pure Node.js tiling package.
 ## API
 
 - `buildGeoJSONLayers(featureModel, { outDir })`
-- `generateTiles(featureModel, { outDir, minZoom, maxZoom, generatedAt, simplify, simplifyTolerance })`
+- `generateTiles(featureModel, { outDir, minZoom, maxZoom, generatedAt, simplify, simplifyToleranceByZoom })`
 - `writeTileManifest(manifest, outFile)`
 
 ## Notes
@@ -24,7 +24,7 @@ generateTiles(featureModel, {
   minZoom: 4,
   maxZoom: 10,
   simplify: true,
-  simplifyTolerance: {
+  simplifyToleranceByZoom: {
     4: 0.1,
     6: 0.01,
     8: 0.001

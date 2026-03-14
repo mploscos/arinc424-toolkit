@@ -84,6 +84,17 @@
       <div style="font-size:11px; margin-top:6px; opacity:0.8">
         URL supports <code>visualization.index.json</code> or <code>tiles/index.json</code>
       </div>
+      <div style="font-size:11px; margin-top:4px; opacity:0.8">
+        Add <code>&debug=1</code> to inspect tile bounds/counts and load stats.
+      </div>
+      <div id="debugControls" style="display:none; font-size:11px; margin-top:8px; border-top:1px solid #d9e2d9; padding-top:6px">
+        <div><strong>Debug controls</strong></div>
+        <label><input id="dbgInspector" type="checkbox" checked /> airspace inspector</label><br />
+        <label><input id="dbgArcCenters" type="checkbox" /> arc centers</label><br />
+        <label><input id="dbgSegmentPoints" type="checkbox" /> segment points</label><br />
+        <label><input id="dbgTileGrid" type="checkbox" checked /> tile grid</label>
+      </div>
+      <div id="airspaceInspector" style="display:none; font-size:11px; margin-top:8px; max-height:220px; overflow:auto; border-top:1px solid #d9e2d9; padding-top:6px"></div>
     </div>
     <div id="map"></div>
     <input id="tilesDirInput" type="file" webkitdirectory directory multiple hidden />

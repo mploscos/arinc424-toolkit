@@ -6,6 +6,7 @@ import {
 
 const params = new URLSearchParams(window.location.search);
 const defaultIndexUrl = params.get("index") || "/data/visualization.index.json";
+const debugEnabled = params.get("debug") === "1";
 
 const indexInput = document.getElementById("indexUrl");
 const loadBtn = document.getElementById("load");
@@ -38,6 +39,10 @@ let local3dFiles = new Map();
 let localIndexFile = null;
 let localBlobUrls = [];
 let rewrittenJsonByPath = new Map();
+const DEBUG_PREFIX = "[arinc-view:cesium]";
+const debugLog = (...args) => { if (debugEnabled) console.log(DEBUG_PREFIX, ...args); };
+const debugWarn = (...args) => { if (debugEnabled) console.warn(DEBUG_PREFIX, ...args); };
+const debugError = (...args) => { if (debugEnabled) console.error(DEBUG_PREFIX, ...args); };
 
 function setStatus(msg) {
   statusEl.textContent = msg;
@@ -139,9 +144,13 @@ async function deriveAndLoadBoundsFromArray(bounds) {
   const lonSpan = maxLon - minLon;
   const latSpan = maxLat - minLat;
   // Ignore near-global extents from coarse manifests; they hide local 3D tiles.
-  if (lonSpan > 300 || latSpan > 140) return false;
+  if (lonSpan > 300 || latSpan > 140) {
+    debugWarn("bounds ignored (near-global)", { bounds, lonSpan, latSpan });
+    return false;
+  }
   const rect = Cesium.Rectangle.fromDegrees(minLon, minLat, maxLon, maxLat);
   await viewer.camera.flyTo({ destination: rect, duration: 1.1 });
+  debugLog("camera fitted to bounds", { bounds });
   return true;
 }
 
@@ -220,6 +229,7 @@ async function loadTileset() {
       tilesetUrl = resolved.tilesetUrl;
       bounds = resolved.bounds;
       statusSource = "local selection";
+      debugLog("local tileset resolved", { tilesetUrl, bounds });
     } else {
       const indexUrl = indexInput.value.trim();
       if (!indexUrl) {
@@ -232,6 +242,14 @@ async function loadTileset() {
       tilesetUrl = resolveRelativeAssetUrl(loaded.threeDTilesIndexUrl, idx.tileset);
       bounds = idx.bounds;
       statusSource = loaded.threeDTilesIndexUrl;
+      debugLog("index loaded", {
+        source: loaded.source,
+        visualizationIndexUrl: loaded.visualizationIndexUrl ?? null,
+        threeDTilesIndexUrl: loaded.threeDTilesIndexUrl,
+        tileset: idx.tileset,
+        bounds: idx.bounds,
+        summary: idx.summary ?? null
+      });
     }
 
     setStatus(`Loading 3D Tiles from ${statusSource} ...`);
@@ -245,9 +263,16 @@ async function loadTileset() {
 
     const usedBounds = await deriveAndLoadBoundsFromArray(bounds);
     if (!usedBounds) await viewer.zoomTo(tileset);
+    debugLog("tileset ready", {
+      source: statusSource,
+      usedBounds,
+      geometricError: tileset.geometricError,
+      hasRoot: Boolean(tileset.root)
+    });
 
     setStatus(`Loaded 3D Tiles (${statusSource})`);
   } catch (err) {
+    debugError("tileset load failure", { message: err?.message || String(err) });
     setStatus(`Failed to load tileset: ${err?.message || err}`);
   }
 }

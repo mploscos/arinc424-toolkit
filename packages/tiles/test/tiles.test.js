@@ -87,7 +87,7 @@ test("generateTiles applies zoom simplification when enabled", () => {
     minZoom: 4,
     maxZoom: 4,
     simplify: true,
-    simplifyTolerance: { 4: 0.2 }
+    simplifyToleranceByZoom: { 4: 0.2 }
   });
   const zDir = path.join(tmp, "4");
   const xDirs = fs.readdirSync(zDir).sort();
@@ -96,4 +96,34 @@ test("generateTiles applies zoom simplification when enabled", () => {
   const tileFile = path.join(zDir, firstX, yFile);
   const fc = JSON.parse(fs.readFileSync(tileFile, "utf8"));
   assert.ok(fc.features[0].geometry.coordinates.length < line.length);
+});
+
+test("generateTiles accepts legacy simplifyTolerance alias", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "arinc-tiles-simplify-alias-"));
+  const model = {
+    schema: "arinc-feature-model",
+    schemaVersion: "1.0.0",
+    metadata: {},
+    features: [
+      {
+        id: "line:alias",
+        layer: "airways",
+        geometry: { type: "LineString", coordinates: [[-5, 0], [-4, 0.1], [-3, -0.1], [-2, 0.1], [-1, 0]] },
+        properties: { id: "line:alias", type: "airway", source: "T", sourceRefs: [{}], createdFrom: { canonicalSchema: "navdata-canonical" }, airwayName: "A1" },
+        bbox: [-5, -1, -1, 1],
+        minZoom: 4,
+        maxZoom: 4,
+        sourceRefs: []
+      }
+    ]
+  };
+
+  const { manifest } = generateTiles(model, {
+    outDir: tmp,
+    minZoom: 4,
+    maxZoom: 4,
+    simplify: true,
+    simplifyTolerance: { 4: 0.2 }
+  });
+  assert.deepEqual(manifest.simplifyTolerance, { 4: 0.2 });
 });

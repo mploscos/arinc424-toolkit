@@ -50,6 +50,7 @@ For output directory `./artifacts/test`:
 - `tiles/` (unless `--skip-tiles`)
   - `manifest.json`
   - `index.json`
+    - includes `tileTemplate`, bounds, and `availableTiles` (sparse tile list)
 - `3dtiles/` (unless `--skip-3dtiles` or no 3D-eligible features)
   - `tileset.json`
   - `index.json`

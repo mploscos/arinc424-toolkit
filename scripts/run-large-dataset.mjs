@@ -120,6 +120,18 @@ function summarizeTiles(tilesDir) {
   };
 }
 
+function buildAvailableTilesIndex(tilesDir) {
+  const files = listFilesRecursive(tilesDir)
+    .map((f) => path.relative(tilesDir, f).replaceAll("\\", "/"))
+    .filter((rel) => /^\d+\/\d+\/\d+\.json$/.test(rel))
+    .sort((a, b) => {
+      const [za, xa, ya] = a.replace(".json", "").split("/").map(Number);
+      const [zb, xb, yb] = b.replace(".json", "").split("/").map(Number);
+      return za - zb || xa - xb || ya - yb;
+    });
+  return files.map((rel) => rel.replace(/\.json$/, ""));
+}
+
 function summarize3DTiles(outDir) {
   const files = listFilesRecursive(outDir);
   const tilesetPath = path.join(outDir, "tileset.json");
@@ -393,6 +405,7 @@ async function main() {
     const tilesIndexPath = path.join(tilesDir, "index.json");
     const tilesManifestPath = path.join(tilesDir, "manifest.json");
     const tilesManifestExists = fs.existsSync(tilesManifestPath);
+    const availableTiles = buildAvailableTilesIndex(tilesDir);
     const tilesIndex = {
       type: "geojson-tiles",
       version: "1.0",
@@ -401,6 +414,7 @@ async function main() {
       layers: Object.keys(report.stages.features.featureCountsByLayer),
       bounds,
       tileTemplate: "./{z}/{x}/{y}.json",
+      availableTiles,
       manifest: tilesManifestExists ? "./manifest.json" : null
     };
     writeJson(tilesIndexPath, tilesIndex);

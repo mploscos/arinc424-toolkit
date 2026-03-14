@@ -66,12 +66,36 @@ import { core, features, tiles, threeDTiles } from "@arinc424/toolkit";
 
 const canonical = await core.parseArincFile("./data/FAACIFP18.dat");
 const featureModel = features.buildFeaturesFromCanonical(canonical);
-await tiles.generateTiles(featureModel, { outDir: "./artifacts/demo/tiles", minZoom: 4, maxZoom: 10 });
-await tiles.writeTileManifest(featureModel, { outDir: "./artifacts/demo/tiles" });
+const { manifest } = tiles.generateTiles(featureModel, {
+  outDir: "./artifacts/demo/tiles",
+  minZoom: 4,
+  maxZoom: 10,
+  simplify: true,
+  simplifyToleranceByZoom: { 4: 0.1, 6: 0.01, 8: 0.001 }
+});
+tiles.writeTileManifest(manifest, "./artifacts/demo/tiles/manifest.json");
 await threeDTiles.build3DTilesFromFeatures(featureModel, { outDir: "./artifacts/demo/3dtiles" });
 ```
 
 For full-run metrics and reporting on large datasets, see `docs/large-dataset.md`.
+
+## Viewer Quick Use
+
+Serve viewers:
+
+```bash
+npm run view:examples
+```
+
+Open:
+
+- OpenLayers: `http://localhost:8080/openlayers-tiles/?index=/data/visualization.index.json`
+- Cesium: `http://localhost:8080/cesium-3dtiles/?index=/data/visualization.index.json`
+
+Debug mode:
+
+- OpenLayers: `&debug=1` (tile boundaries, per-tile feature counts, airspace click inspector, request stats)
+- Cesium: `&debug=1` (index + tileset load traces)
 
 ## Architecture Overview
 
@@ -94,7 +118,7 @@ Dependency direction:
 ## Current scope notes
 
 - `@arinc424/tiles` implements tile indexing + basic geometry clipping.
-- Geometry simplification remains limited and is tracked as follow-up work.
+- `@arinc424/tiles` supports optional zoom-dependent simplification via `simplifyToleranceByZoom`.
 
 
 ## Quality Commands
@@ -111,14 +135,16 @@ See `docs/testing.md` for details.
 Cartography and styling notes: `docs/cartography.md`.
 ARINC UC/UR airspace boundary reconstruction notes: `docs/arinc-airspace-geometry.md`.
 
-## Release 0.1.2
+## Release 0.1.3
 
-Version `0.1.2` is the current public modular release with:
+Version `0.1.3` is the current public modular release with:
 
 - workspace package boundaries (`core` -> `features` -> `tiles`/`3dtiles` -> `view`)
 - contract-driven outputs (`canonical.json`, `features.json`, tile/3D tiles indexes)
 - deterministic tests, goldens, and smoke checks
 - index-driven viewers for OpenLayers and Cesium
+- improved OpenLayers reliability for sparse `z/x/y.json` tiles (404-as-empty + robust tile loader)
+- airspace debug inspector and geometry debug overlays in OpenLayers (`?debug=1`)
 
 For release details, see [CHANGELOG.md](./CHANGELOG.md).
 
@@ -149,6 +175,14 @@ It also writes a unified visualization contract:
 - `visualization.index.json`
 - `tiles/index.json`
 - `3dtiles/index.json`
+
+`tiles/index.json` includes:
+
+- `tileTemplate`
+- `minZoom` / `maxZoom`
+- `bounds`
+- `layers`
+- optional `availableTiles` (sparse tile keys used by the viewer to avoid requesting missing tiles)
 
 Viewers in `@arinc424/view` can load the whole dataset using:
 - OpenLayers: `openlayers-tiles/?index=/data/visualization.index.json`

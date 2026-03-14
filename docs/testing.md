@@ -56,7 +56,7 @@ npm run bench -w @arinc424/features
 npm run bench -w @arinc424/tiles
 ```
 
-## Release readiness checklist (v0.1.2)
+## Release readiness checklist (v0.1.3)
 
 - [ ] `npm test` passes
 - [ ] `npm run test:golden` passes

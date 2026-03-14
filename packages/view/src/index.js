@@ -13,3 +13,23 @@ export {
   load3DTilesIndex,
   resolveRelativeAssetUrl
 } from "./loaders/visualization-index.js";
+
+export {
+  buildCartography,
+  getDefaultLayerDescriptor,
+  listDefaultLayerDescriptors,
+  geometryTypeFromGeometry,
+  buildLabelCandidates
+} from "./cartography/index.js";
+
+export {
+  isAirspaceFeature,
+  extractAirspaceInspection,
+  renderAirspaceInspectionHtml
+} from "./debug/airspace-inspector.js";
+
+export {
+  extractArcCenters,
+  extractSegmentPoints,
+  computeGeometryStats
+} from "./debug/geometry-debug-overlay.js";
