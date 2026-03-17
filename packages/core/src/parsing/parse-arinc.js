@@ -29,6 +29,42 @@ function makeSourceRef({ recordType, lineNumber, rawLine, entityType, entityId }
   return { recordType, lineNumber, rawLine, entityType, entityId };
 }
 
+function makeHoldId(rec) {
+  return makeId("hold", [
+    rec.icao,
+    rec.region,
+    rec.fixId,
+    rec.fixIcao,
+    rec.fixSection,
+    rec.duplicate || "0"
+  ]);
+}
+
+function splitAirspacePartsIntoGroups(parts) {
+  const groups = [];
+  let current = [];
+  let prevSeq = null;
+
+  for (const part of parts) {
+    const seq = Number(part.seq ?? 0);
+    const startsNewLogicalBoundary = current.length > 0
+      && Number.isFinite(seq)
+      && Number.isFinite(prevSeq)
+      && seq <= prevSeq;
+
+    if (startsNewLogicalBoundary) {
+      groups.push(current);
+      current = [];
+    }
+
+    current.push(part);
+    prevSeq = seq;
+  }
+
+  if (current.length > 0) groups.push(current);
+  return groups;
+}
+
 function parseSuppressedNmThousandths(raw) {
   const text = String(raw ?? "").trim();
   if (!/^\d+$/.test(text)) return null;
@@ -131,37 +167,58 @@ function finalizeDerivedGeometry(model, buckets, options = {}) {
   }
 
   for (const [key, parts] of buckets.airspaces) {
-    const ordered = [...parts].sort((a, b) => a.seq - b.seq);
-    const reconstruction = reconstructAirspaceBoundary(ordered, {
-      maxArcStepDeg: options.airspaceArcStepDeg ?? 2,
-      maxLineStepDeg: options.airspaceLineStepDeg ?? 2
-    });
-    const closed = reconstruction.coordinates;
-    if (closed.length < 4) continue;
+    const groups = splitAirspacePartsIntoGroups(parts);
 
-    const head = ordered[0];
-    model.entities.airspaces.push({
-      id: makeId("airspace", [head.kind, key]),
-      type: "airspace",
-      airspaceType: head.airspaceType ?? null,
-      airspaceClass: head.classification ?? null,
-      restrictiveType: head.restrictiveType ?? null,
-      name: head.name ?? null,
-      lowerLimitM: parseLimit(head.lowerLimit, head.lowerUnit),
-      upperLimitM: parseLimit(head.upperLimit, head.upperUnit),
-      coordinates: closed,
-      bbox: bboxFromCoords(closed),
-      sourceRefs: ordered.flatMap((s) => s.sourceRefs),
-      ...(options.includeAirspaceGeometryDebug
-        ? {
-          geometryDebug: {
-            reconstructionWarnings: reconstruction.warnings,
-            reconstructionErrors: reconstruction.errors,
-            segmentMetadata: reconstruction.segmentMetadata
+    for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
+      const ordered = [...groups[groupIndex]].sort((a, b) => a.seq - b.seq || (a.lineNumber ?? 0) - (b.lineNumber ?? 0));
+      const reconstruction = reconstructAirspaceBoundary(ordered, {
+        maxArcStepDeg: options.airspaceArcStepDeg ?? 2,
+        maxLineStepDeg: options.airspaceLineStepDeg ?? 2
+      });
+      const closed = reconstruction.coordinates;
+      if (closed.length < 4) continue;
+
+      const head = ordered[0];
+      const baseId = makeId("airspace", [head.kind, key]);
+      const entityId = groups.length > 1 ? `${baseId}:B${groupIndex + 1}` : baseId;
+      const groupSourceRefs = ordered.flatMap((s) => (
+        s.sourceRefs || []
+      ).map((ref) => (groups.length > 1 ? { ...ref, entityId } : ref)));
+
+      model.entities.airspaces.push({
+        id: entityId,
+        type: "airspace",
+        airspaceType: head.airspaceType ?? null,
+        airspaceClass: head.classification ?? null,
+        restrictiveType: head.restrictiveType ?? null,
+        name: head.name ?? null,
+        lowerLimitM: parseLimit(head.lowerLimit, head.lowerUnit),
+        upperLimitM: parseLimit(head.upperLimit, head.upperUnit),
+        coordinates: closed,
+        bbox: bboxFromCoords(closed),
+        sourceRefs: groupSourceRefs,
+        ...(options.includeAirspaceGeometryDebug
+          ? {
+            geometryDebug: {
+              orderedSequence: ordered.map((segment) => ({
+                seq: segment.seq ?? null,
+                cont: segment.cont ?? null,
+                boundaryVia: segment.boundaryVia ?? null,
+                lat: segment.lat ?? null,
+                lon: segment.lon ?? null
+              })),
+              segmentCount: ordered.length,
+              ringCount: 1,
+              splitGroupCount: groups.length,
+              splitGroupIndex: groupIndex + 1,
+              reconstructionWarnings: reconstruction.warnings,
+              reconstructionErrors: reconstruction.errors,
+              segmentMetadata: reconstruction.segmentMetadata
+            }
           }
-        }
-        : {})
-    });
+          : {})
+      });
+    }
   }
 
   for (const parts of buckets.procedures.values()) {
@@ -219,7 +276,7 @@ function finalizeDerivedGeometry(model, buckets, options = {}) {
     if (!fix) continue;
     const coords = [fix.coord, [fix.coord[0] + 0.01, fix.coord[1] + 0.01]];
     model.entities.holds.push({
-      id: makeId("hold", [h.icao, h.region, h.fixId, h.duplicate || "0"]),
+      id: makeHoldId(h),
       type: "hold",
       refs: {
         fixId: fix.id,
@@ -425,7 +482,7 @@ async function parseArincLines(rawLines, options = {}) {
       const kind = detected;
       const key = rec.key;
       const list = airspaceBuckets.get(`${kind}:${key}`) ?? [];
-      list.push({ ...rec, kind, sourceRefs: [makeSourceRef({ ...sourceRefStub, entityType: "airspaces", entityId: makeId("airspace", [kind, key]) })] });
+      list.push({ ...rec, kind, lineNumber: row.lineNumber, sourceRefs: [makeSourceRef({ ...sourceRefStub, entityType: "airspaces", entityId: makeId("airspace", [kind, key]) })] });
       airspaceBuckets.set(`${kind}:${key}`, list);
     } else if (["PD", "PE", "PF", "HD", "HE", "HF"].includes(detected)) {
       const key = `${detected}:${normalizeKey(rec.icao)}:${normalizeKey(rec.airportId)}:${normalizeKey(rec.procId)}:${normalizeKey(rec.routeType)}:${normalizeKey(rec.transitionId, "MAIN")}`;
@@ -433,7 +490,7 @@ async function parseArincLines(rawLines, options = {}) {
       list.push({ ...rec, type: detected, sourceRefs: [makeSourceRef({ ...sourceRefStub, entityType: "procedures", entityId: makeId("procedure", [key]) })] });
       procedureBuckets.set(key, list);
     } else if (detected === "EP") {
-      holdRecords.push({ ...rec, sourceRefs: [makeSourceRef({ ...sourceRefStub, entityType: "holds", entityId: makeId("hold", [rec.icao, rec.region, rec.fixId, rec.duplicate || "0"]) })] });
+      holdRecords.push({ ...rec, sourceRefs: [makeSourceRef({ ...sourceRefStub, entityType: "holds", entityId: makeHoldId(rec) })] });
     }
   }
 

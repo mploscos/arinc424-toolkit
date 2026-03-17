@@ -25,12 +25,12 @@ function makePA() {
   return a.join("");
 }
 
-function makeEA(id, lat, lon) {
+function makeEA(id, lat, lon, icao = "US") {
   const a = blankLine();
   a[0] = "S";
   put(a, 5, 6, "EA");
   put(a, 7, 10, "K2  ");
-  put(a, 11, 12, "US");
+  put(a, 11, 12, icao);
   put(a, 14, 18, id);
   put(a, 33, 41, lat);
   put(a, 42, 51, lon);
@@ -72,6 +72,49 @@ function makePDRF(seq, procId, transitionId, fixId, centerFix, arcRadiusRaw) {
   put(a, 107, 111, centerFix);
   put(a, 112, 113, "US");
   put(a, 114, 116, "PC");
+  return a.join("");
+}
+
+function makeEP({ duplicate = "40", fixId, fixIcao = "US", fixSection = "DB", inboundRaw = "2210", turnDir = "L", legLengthRaw = "054", legTimeRaw = "", minAlt = "04000", maxAlt = "", speedRaw = "", name = "" }) {
+  const a = blankLine();
+  a[0] = "S";
+  put(a, 5, 6, "EP");
+  put(a, 7, 10, "ENRT");
+  put(a, 28, 29, duplicate);
+  put(a, 30, 34, fixId);
+  put(a, 35, 36, fixIcao);
+  put(a, 37, 38, fixSection);
+  put(a, 39, 39, "0");
+  put(a, 40, 43, inboundRaw);
+  put(a, 44, 44, turnDir);
+  put(a, 45, 47, legLengthRaw);
+  put(a, 48, 49, legTimeRaw);
+  put(a, 50, 54, minAlt);
+  put(a, 55, 59, maxAlt);
+  put(a, 60, 62, speedRaw);
+  put(a, 99, 123, name);
+  return a.join("");
+}
+
+function makeUC({ icao = "BI", airspaceType = "B", airspaceCenter = "BIRK", classification = "", multipleCode = "Z", seq, boundaryVia = "G", lat, lon, lowerLimit = "GND", lowerUnit = " ", upperLimit = "UNLTD", upperUnit = " ", name = "", cont = "0" }) {
+  const a = blankLine();
+  a[0] = "S";
+  put(a, 5, 6, "UC");
+  put(a, 7, 8, icao);
+  put(a, 10, 10, airspaceType);
+  put(a, 10, 14, airspaceCenter);
+  put(a, 17, 17, classification);
+  put(a, 20, 20, multipleCode);
+  put(a, 21, 24, String(seq).padStart(4, "0"));
+  put(a, 25, 25, cont);
+  put(a, 31, 32, boundaryVia);
+  put(a, 33, 41, lat);
+  put(a, 42, 51, lon);
+  put(a, 82, 86, lowerLimit);
+  put(a, 87, 87, lowerUnit);
+  put(a, 88, 92, upperLimit);
+  put(a, 93, 93, upperUnit);
+  put(a, 94, 123, name);
   return a.join("");
 }
 
@@ -136,4 +179,56 @@ test("parseArincText decodes RF ARC Radius using suppressed thousandths", async 
   assert.ok(rf);
   assert.equal(rf.arcRadiusRaw, "002070");
   assert.equal(rf.arcRadiusNm, 2.07);
+});
+
+test("parseArincText keeps Jeppesen-like holds distinct when fixId collides across ICAO sections", async () => {
+  const text = [
+    "HDR JEPP TEST",
+    makeEA("AG", "N50000000", "E030000000", "UR"),
+    makeEA("AG", "N49000000", "E002000000", "LF"),
+    makeEP({ duplicate: "40", fixId: "AG", fixIcao: "UR", fixSection: "DB", minAlt: "FL098", maxAlt: "FL187", name: "AGOY" }),
+    makeEP({ duplicate: "40", fixId: "AG", fixIcao: "LF", fixSection: "DB", legTimeRaw: "10", legLengthRaw: "", minAlt: "02500", maxAlt: "FL060", speedRaw: "220", name: "AGEN" })
+  ].join("\n");
+
+  const model = await parseArincText(text);
+  assert.equal(model.entities.holds.length, 2);
+  assert.notEqual(model.entities.holds[0].id, model.entities.holds[1].id);
+  assert.ok(model.entities.holds.some((item) => item.id.includes(":UR:DB:40")));
+  assert.ok(model.entities.holds.some((item) => item.id.includes(":LF:DB:40")));
+});
+
+test("FAA baseline airway parsing remains unchanged after Jeppesen hold-id fix", async () => {
+  const text = [
+    "HDR FAACIFP TEST",
+    makePA(),
+    makeEA("DIXIE", "N40400000", "W073100000"),
+    makeEA("MERIT", "N41000000", "W072000000"),
+    makeER("J75", 1, "DIXIE"),
+    makeER("J75", 2, "MERIT")
+  ].join("\n");
+
+  const model = await parseArincText(text);
+  assert.equal(model.entities.airways.length, 1);
+  assert.equal(model.entities.airways[0].refs.segmentFixIds.length, 2);
+  assert.equal(model.entities.holds.length, 0);
+});
+
+test("parseArincText splits Jeppesen-like airspace boundaries when sequence restarts under the same base key", async () => {
+  const text = [
+    "HDR JEPP TEST",
+    makeUC({ seq: 10, cont: "1", lat: "N90000000", lon: "W060000000", name: "REYKJAVIK CTA" }),
+    makeUC({ seq: 20, lat: "N90000000", lon: "W000000000" }),
+    makeUC({ seq: 30, boundaryVia: "GE", lat: "N82000000", lon: "W060000000" }),
+    makeUC({ seq: 10, cont: "1", lat: "N64470900", lon: "W022521500", lowerLimit: "01000", upperLimit: "FL245", name: "FAXI TMA" }),
+    makeUC({ seq: 20, lat: "N64425300", lon: "W022282400" }),
+    makeUC({ seq: 30, boundaryVia: "GE", lat: "N64380037", lon: "W022580185" })
+  ].join("\n");
+
+  const model = await parseArincText(text, { includeAirspaceGeometryDebug: true });
+  const matches = model.entities.airspaces.filter((item) => item.id.startsWith("airspace:UC:UC:BI|B|BIRK||Z"));
+  assert.equal(matches.length, 2);
+  assert.ok(matches.some((item) => item.name === "REYKJAVIK CTA"));
+  assert.ok(matches.some((item) => item.name === "FAXI TMA"));
+  assert.ok(matches.every((item) => item.geometryDebug?.splitGroupCount === 2));
+  assert.ok(matches.every((item) => item.coordinates.length >= 4));
 });

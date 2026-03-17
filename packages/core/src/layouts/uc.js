@@ -45,6 +45,7 @@ export function createUcLayout(config, layoutName = "UC") {
       const key = `${icao}|${airspaceType}|${airspaceCenter}|${classification}|${multipleCode}`;
       return {
         key,
+        cont,
         seq,
         lat,
         lon,

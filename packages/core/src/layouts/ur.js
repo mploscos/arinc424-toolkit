@@ -44,6 +44,7 @@ export function createUrLayout(config, layoutName = "UR") {
       const key = `${icao}|${restrictiveType}|${designation}|${multipleCode}`;
       return {
         key,
+        cont,
         seq,
         lat,
         lon,

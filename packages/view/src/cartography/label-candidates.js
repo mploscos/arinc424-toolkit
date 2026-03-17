@@ -1,3 +1,5 @@
+import { getLabelPriority } from "./style-system.js";
+
 function firstTextValue(properties, fields) {
   for (const field of fields) {
     const raw = properties?.[field];
@@ -33,9 +35,7 @@ export function buildLabelCandidates(features, layerMap) {
       layer,
       text,
       minZoom: labelMinZoom,
-      priority: Number.isFinite(descriptor?.label?.priority)
-        ? descriptor.label.priority
-        : (descriptor.styleHint === "airspace" ? 80 : 20)
+      priority: getLabelPriority(feature, descriptor)
     });
   }
   return out.sort((a, b) => (b.priority - a.priority) || a.layer.localeCompare(b.layer) || a.text.localeCompare(b.text));

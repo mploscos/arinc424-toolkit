@@ -15,7 +15,17 @@ function isFiniteLonLat(p) {
 
 function normalizeVia(v) {
   const raw = String(v ?? "").trim().toUpperCase();
+  return raw || "G";
+}
+
+function baseVia(v) {
+  const raw = normalizeVia(v);
   return raw ? raw[0] : "G";
+}
+
+function endsBoundary(v) {
+  const raw = normalizeVia(v);
+  return raw === "E" || raw.endsWith("E");
 }
 
 function normalizeBearing(b) {
@@ -182,10 +192,11 @@ export function reconstructAirspaceBoundary(orderedSegments, options = {}) {
       continue;
     }
 
-    const via = normalizeVia(seg.boundaryVia);
+    const viaRaw = normalizeVia(seg.boundaryVia);
+    const via = baseVia(viaRaw);
     const seq = Number(seg.seq ?? i);
     const next = points[i + 1];
-    const end = via === "E" ? origin : next;
+    const end = endsBoundary(viaRaw) ? origin : next;
     if (!isFiniteLonLat(end)) {
       errors.push(`Missing next point for segment at seq=${seq}`);
       continue;

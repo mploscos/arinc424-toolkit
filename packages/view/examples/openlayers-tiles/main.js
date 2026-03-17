@@ -26,6 +26,17 @@ import {
   getChartStyleToken,
   getLabelRule
 } from "./cartography-style-system.js";
+import { CHART_MODE_TERMINAL, normalizeChartMode } from "./chart-modes.js";
+import { isFeatureVisibleInChartMode } from "./chart-visibility-rules.js";
+import { getLabelRuleForChartMode } from "./chart-label-rules.js";
+import { createProcedureFocusContext } from "./procedure-focus-rules.js";
+import {
+  getFeatureBBox,
+  expandBBox,
+  buildAirportFocusBBox,
+  buildProcedureFocusBBox,
+  mergeBBoxes
+} from "./spatial-helpers.js";
 import {
   isAirspaceFeature,
   extractAirspaceInspection,
@@ -60,6 +71,7 @@ const dbgProcLegOnlyEl = document.getElementById("dbgProcLegOnly");
 const dbgProcFocusEl = document.getElementById("dbgProcFocus");
 const dbgAirspaceColorsEl = document.getElementById("dbgAirspaceColors");
 const debugLegendEl = document.getElementById("debugLegend");
+const dbgSpatialFocusEl = document.getElementById("dbgSpatialFocus");
 const qaShowIssuesEl = document.getElementById("qaShowIssues");
 const qaSeverityEl = document.getElementById("qaSeverity");
 const qaTypeEl = document.getElementById("qaType");
@@ -77,6 +89,10 @@ const procSelectedOnlyEl = document.getElementById("procSelectedOnly");
 const procLayerStatusEl = document.getElementById("procLayerStatus");
 const procDebugNoticeEl = document.getElementById("procDebugNotice");
 const procDebugZoomNoteEl = document.getElementById("procDebugZoomNote");
+const chartModeEl = document.getElementById("chartMode");
+const chartModeStatusEl = document.getElementById("chartModeStatus");
+const chartFocusStatusEl = document.getElementById("chartFocusStatus");
+const zoomDebugStatusEl = document.getElementById("zoomDebugStatus");
 
 indexUrlEl.value = defaultIndexUrl || "/artifacts/<dataset>/visualization.index.json";
 const DEBUG_PREFIX = "[arinc-view:ol]";
@@ -93,7 +109,8 @@ const debugUiState = {
   procedureLegColors: debugEnabled ? Boolean(dbgProcLegColorsEl?.checked ?? false) : false,
   procedureLegOnly: debugEnabled ? Boolean(dbgProcLegOnlyEl?.checked ?? true) : false,
   procedureFocus: debugEnabled ? Boolean(dbgProcFocusEl?.checked ?? false) : false,
-  airspaceColors: debugEnabled ? Boolean(dbgAirspaceColorsEl?.checked ?? false) : false
+  airspaceColors: debugEnabled ? Boolean(dbgAirspaceColorsEl?.checked ?? false) : false,
+  spatialFocus: debugEnabled ? Boolean(dbgSpatialFocusEl?.checked ?? false) : false
 };
 const procedureUiState = {
   show: false,
@@ -109,7 +126,20 @@ const procedureUiState = {
   normalLayerLoaded: false,
   debugLegLayerLoaded: false
 };
+const chartModeState = {
+  mode: normalizeChartMode(chartModeEl?.value || CHART_MODE_TERMINAL)
+};
 const observedProcedureCatalog = new Map();
+const observedAirportBounds = new Map();
+const observedAirportRunwayBounds = new Map();
+const observedProcedureBounds = new Map();
+let procedureFocusContext = createProcedureFocusContext([], "all", deriveProcedureDisplayFromProps);
+let chartSpatialContext = {
+  terminalFocusBBox: null,
+  terminalContextBBox: null,
+  procedureFocusBBox: null,
+  procedureContextBBox: null
+};
 
 const debugAirspaceBoundaryStyle = new Style({
   stroke: new Stroke({ color: "rgba(255, 20, 20, 0.95)", width: 2.2 }),
@@ -192,6 +222,8 @@ if (basemapMode === "muted") {
 }
 
 let tileLayer = null;
+let inspectionVectorLayer = null;
+let inspectionVectorSource = null;
 let activeCartography = { layers: [], labelCandidates: [], bounds: null };
 let activeLayerDescriptorMap = new Map();
 let localTileFiles = new Map();
@@ -211,7 +243,11 @@ let issueHighlightSource = null;
 let procedureDebugLayer = null;
 let procedureDebugSource = null;
 let procedureDebugFeatureCount = 0;
+let spatialFocusLayer = null;
+let spatialFocusSource = null;
 let activeTileMaxZoom = 15;
+let activeInspectMaxZoom = 18;
+let activeTileConfig = null;
 let issueFeaturesRaw = [];
 let issueFilterSeverity = "all";
 let issueFilterType = "all";
@@ -239,16 +275,135 @@ function setActiveCartography(cartography) {
 
 updateProcedureLayerStatus();
 
-function updateViewMaxZoomForDebugInspection() {
+function updateViewMaxZoomForInspection() {
   const view = map.getView();
   const tileMax = Number.isFinite(activeTileMaxZoom) ? activeTileMaxZoom : 15;
-  const deepDebugMax = Math.max(tileMax + 8, 18);
-  const useDeepDebugZoom = Boolean(
-    debugEnabled
-    && debugUiState.procedureLegColors
-    && procedureUiState.debugLegLayerLoaded
-  );
-  view.setMaxZoom(useDeepDebugZoom ? deepDebugMax : tileMax);
+  activeInspectMaxZoom = Math.max(tileMax + 8, 18);
+  view.setMaxZoom(activeInspectMaxZoom);
+  updateZoomDebugStatus();
+}
+
+function updateZoomDebugStatus() {
+  if (!zoomDebugStatusEl) return;
+  const zoom = map.getView()?.getZoom?.();
+  const tileActive = Boolean(tileLayer?.getVisible?.());
+  const inspectionActive = Boolean(inspectionVectorLayer?.getVisible?.());
+  zoomDebugStatusEl.textContent = `zoom: ${Number.isFinite(zoom) ? zoom.toFixed(2) : "n/a"} | arinc tiled layer active: ${tileActive ? "yes" : "no"} | high-zoom inspection layer active: ${inspectionActive ? "yes" : "no"} | tile max: ${activeTileMaxZoom}`;
+}
+
+function ensureInspectionVectorLayer() {
+  if (inspectionVectorLayer) return;
+  inspectionVectorSource = new VectorSource();
+  inspectionVectorLayer = new VectorLayer({
+    source: inspectionVectorSource,
+    style: layerStyle,
+    declutter: true,
+    zIndex: 160
+  });
+  inspectionVectorLayer.setVisible(false);
+  map.addLayer(inspectionVectorLayer);
+}
+
+function lonToTileX(lon, z) {
+  const n = 2 ** z;
+  return Math.floor(((lon + 180) / 360) * n);
+}
+
+function latToTileY(lat, z) {
+  const n = 2 ** z;
+  const latRad = (Math.max(-85.05112878, Math.min(85.05112878, lat)) * Math.PI) / 180;
+  return Math.floor((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2 * n);
+}
+
+async function loadInspectionTileFeatures() {
+  ensureInspectionVectorLayer();
+  if (!activeTileConfig || !Number.isFinite(activeTileMaxZoom)) {
+    inspectionVectorSource.clear();
+    inspectionVectorLayer.setVisible(false);
+    updateZoomDebugStatus();
+    return;
+  }
+
+  const zoom = map.getView().getZoom();
+  if (!Number.isFinite(zoom) || zoom <= activeTileMaxZoom) {
+    inspectionVectorSource.clear();
+    inspectionVectorLayer.setVisible(false);
+    updateZoomDebugStatus();
+    return;
+  }
+
+  const extent4326 = transformExtent(map.getView().calculateExtent(map.getSize()), "EPSG:3857", "EPSG:4326");
+  const [minLon, minLat, maxLon, maxLat] = extent4326;
+  const z = activeTileMaxZoom;
+  const n = 2 ** z;
+  const minX = Math.max(0, Math.min(n - 1, lonToTileX(minLon, z)));
+  const maxX = Math.max(0, Math.min(n - 1, lonToTileX(maxLon, z)));
+  const minY = Math.max(0, Math.min(n - 1, latToTileY(maxLat, z)));
+  const maxY = Math.max(0, Math.min(n - 1, latToTileY(minLat, z)));
+  const tileFormat = new GeoJSON({ dataProjection: "EPSG:4326", featureProjection: "EPSG:3857" });
+  const features = [];
+  const seenIds = new Set();
+
+  for (let x = minX; x <= maxX; x += 1) {
+    for (let y = minY; y <= maxY; y += 1) {
+      if (activeTileConfig.availableTilesSet && !activeTileConfig.availableTilesSet.has(`${z}/${x}/${y}`)) continue;
+      let json = null;
+      if (activeTileConfig.localMode) {
+        const tilePath = `${z}/${x}/${y}.json`;
+        const file = findLocalFile(tilePath) || findLocalFile(`tiles/${tilePath}`);
+        if (!file) continue;
+        try {
+          json = JSON.parse(await file.text());
+        } catch {
+          continue;
+        }
+      } else {
+        const url = activeTileConfig.remoteTemplate
+          .replace("{z}", String(z))
+          .replace("{x}", String(x))
+          .replace("{y}", String(y));
+        try {
+          const r = await fetch(url);
+          if (!r.ok) continue;
+          json = await r.json();
+        } catch {
+          continue;
+        }
+      }
+      const tileFeatures = tileFormat.readFeatures(json, {
+        dataProjection: "EPSG:4326",
+        featureProjection: "EPSG:3857"
+      });
+      for (const feature of tileFeatures) {
+        const featureId = String(feature.getId?.() ?? feature.get("id") ?? `${x}/${y}/${features.length}`);
+        if (seenIds.has(featureId)) continue;
+        seenIds.add(featureId);
+        features.push(feature);
+      }
+    }
+  }
+
+  inspectionVectorSource.clear();
+  if (features.length > 0) {
+    inspectionVectorSource.addFeatures(features);
+    inspectionVectorLayer.setVisible(true);
+  } else {
+    inspectionVectorLayer.setVisible(false);
+  }
+  updateZoomDebugStatus();
+}
+
+async function updateHighZoomInspectionMode() {
+  const zoom = map.getView().getZoom();
+  const useInspectionLayer = Number.isFinite(zoom) && zoom > activeTileMaxZoom;
+  if (tileLayer) tileLayer.setVisible(!useInspectionLayer);
+  if (!useInspectionLayer) {
+    if (inspectionVectorSource) inspectionVectorSource.clear();
+    if (inspectionVectorLayer) inspectionVectorLayer.setVisible(false);
+    updateZoomDebugStatus();
+    return;
+  }
+  await loadInspectionTileFeatures();
 }
 
 function styleByLayer(feature, resolution) {
@@ -271,6 +426,18 @@ function styleByLayer(feature, resolution) {
     if (!isProcedureDebugLeg && !procedureUiState.show && !procedureSelected) return null;
     if (!procedureMatchesFilters(feature, procedureMeta) && !procedureSelected) return null;
   }
+  if (!isFeatureVisibleInChartMode({
+    feature,
+    descriptor,
+    zoom,
+    mode: chartModeState.mode,
+    procedureState: procedureUiState,
+    focusContext: procedureFocusContext,
+    spatialContext: chartSpatialContext,
+    deriveProcedureDisplayFromFeature
+  })) {
+    return null;
+  }
   if (hideNormalProceduresInDebug && isProcedure && !isProcedureDebugLeg) {
     return null;
   }
@@ -289,8 +456,9 @@ function styleByLayer(feature, resolution) {
   let chartStyles = chartStyleCache.get(styleKey);
   if (!chartStyles) {
     if (token.kind === "airspace") {
-      const fillColor = debugEnabled && debugUiState.procedureFocus ? lightenAlpha(token.fill, 0.32) : token.fill;
-      const strokeColor = debugEnabled && debugUiState.procedureFocus ? lightenAlpha(token.stroke, 0.5) : token.stroke;
+      const modeFocus = chartModeState.mode === "PROCEDURE";
+      const fillColor = (debugEnabled && debugUiState.procedureFocus) || modeFocus ? lightenAlpha(token.fill, modeFocus ? 0.28 : 0.32) : token.fill;
+      const strokeColor = (debugEnabled && debugUiState.procedureFocus) || modeFocus ? lightenAlpha(token.stroke, modeFocus ? 0.44 : 0.5) : token.stroke;
       chartStyles = [new Style({
         fill: new Fill({ color: fillColor }),
         stroke: new Stroke({
@@ -305,7 +473,7 @@ function styleByLayer(feature, resolution) {
       if (token.casing && token.casingWidth > 0) {
         chartStyles.push(new Style({
           stroke: new Stroke({
-            color: debugEnabled && debugUiState.procedureFocus ? lightenAlpha(token.casing, 0.3) : token.casing,
+            color: (debugEnabled && debugUiState.procedureFocus) || chartModeState.mode === "PROCEDURE" ? lightenAlpha(token.casing, 0.26) : token.casing,
             width: token.casingWidth
           }),
           zIndex: 35
@@ -313,8 +481,8 @@ function styleByLayer(feature, resolution) {
       }
       chartStyles.push(new Style({
         stroke: new Stroke({
-          color: debugEnabled && debugUiState.procedureFocus ? lightenAlpha(token.stroke, 0.32) : token.stroke,
-          width: debugEnabled && debugUiState.procedureFocus ? Math.max(0.7, token.width - 0.3) : token.width
+          color: (debugEnabled && debugUiState.procedureFocus) || chartModeState.mode === "PROCEDURE" ? lightenAlpha(token.stroke, 0.28) : token.stroke,
+          width: (debugEnabled && debugUiState.procedureFocus) || chartModeState.mode === "PROCEDURE" ? Math.max(0.65, token.width - 0.35) : token.width
         }),
         zIndex: 40
       }));
@@ -342,15 +510,16 @@ function styleByLayer(feature, resolution) {
         zIndex: 95
       })];
     } else if (token.kind === "procedure") {
+      const hideUnselectedInProcedureMode = chartModeState.mode === "PROCEDURE" && procedureFocusContext.selected;
       chartStyles = [new Style({
         stroke: new Stroke({
-          color: procedureSelected ? "rgba(255, 0, 255, 0.96)" : "rgba(255, 0, 255, 0.48)",
-          width: procedureSelected ? token.width : Math.max(1, token.width - 0.45),
+          color: procedureSelected ? "rgba(255, 0, 255, 0.96)" : (hideUnselectedInProcedureMode ? "rgba(255, 0, 255, 0.08)" : "rgba(255, 0, 255, 0.34)"),
+          width: procedureSelected ? token.width : Math.max(0.8, token.width - 0.55),
           lineDash: token.lineDash || undefined
         }),
         image: token.pointRadius > 0 ? new CircleStyle({
           radius: procedureSelected ? token.pointRadius : Math.max(2, token.pointRadius - 0.5),
-          fill: new Fill({ color: procedureSelected ? "rgba(255, 0, 255, 0.96)" : "rgba(255, 0, 255, 0.48)" }),
+          fill: new Fill({ color: procedureSelected ? "rgba(255, 0, 255, 0.96)" : (hideUnselectedInProcedureMode ? "rgba(255, 0, 255, 0.1)" : "rgba(255, 0, 255, 0.34)") }),
           stroke: new Stroke({ color: "#ffffff", width: 1.1 })
         }) : undefined,
         zIndex: 70
@@ -374,7 +543,18 @@ function appendLabelStyles(feature, descriptor, zoom, styles, suppress = false) 
   if (debugEnabled && debugUiState.procedureFocus && !isProcedureLayerName(String(feature.get("layer") || "").toLowerCase())) return out;
   if (!descriptor?.label?.enabled) return out;
   const layer = String(feature.get("layer") || "").toLowerCase();
-  const labelRule = getLabelRule(feature, descriptor, zoom, labelsMinZoom);
+  const baseRule = getLabelRule(feature, descriptor, zoom, labelsMinZoom);
+  const labelRule = getLabelRuleForChartMode({
+    feature,
+    descriptor,
+    baseRule,
+    zoom,
+    mode: chartModeState.mode,
+    procedureState: procedureUiState,
+    focusContext: procedureFocusContext,
+    spatialContext: chartSpatialContext,
+    deriveProcedureDisplayFromFeature
+  });
   if (!labelRule.enabled) return out;
   const label = labelRule.text;
   const key = `${layer}|${label}|${labelRule.priority}`;
@@ -575,7 +755,47 @@ function mergeProcedureCatalogEntries(...collections) {
   return [...merged.values()];
 }
 
+function mergeObservedBounds(mapLike, key, bbox) {
+  if (!key || !bbox) return;
+  const existing = mapLike.get(key);
+  mapLike.set(key, mergeBBoxes([existing, bbox]));
+}
+
+function observeSpatialContextFeatures(features = []) {
+  let changed = false;
+  for (const feature of features) {
+    const layer = String(feature?.get?.("layer") || "").toLowerCase();
+    const bbox = getFeatureBBox(feature);
+    if (!bbox) continue;
+
+    if (layer === "airports" || layer === "airport" || layer === "heliports" || layer === "heliport") {
+      const airportKey = String(feature.get("ident") ?? feature.get("airportIdent") ?? feature.get("airportId") ?? "").trim();
+      mergeObservedBounds(observedAirportBounds, airportKey.replace(/^airport:[A-Z0-9]+:/i, ""), bbox);
+      changed = true;
+      continue;
+    }
+
+    if (layer === "runways") {
+      const airportKey = String(feature.get("airportIdent") ?? feature.get("airportId") ?? "").trim().replace(/^airport:[A-Z0-9]+:/i, "");
+      mergeObservedBounds(observedAirportRunwayBounds, airportKey, bbox);
+      changed = true;
+      continue;
+    }
+
+    if (isProcedureLayerName(layer)) {
+      const meta = deriveProcedureDisplayFromFeature(feature);
+      mergeObservedBounds(observedProcedureBounds, meta.key, bbox);
+      changed = true;
+    }
+  }
+  if (changed) {
+    rebuildChartSpatialContext();
+    refreshSpatialFocusOverlay();
+  }
+}
+
 function observeProcedureFeatures(features = []) {
+  observeSpatialContextFeatures(features);
   let added = 0;
   for (const feature of features) {
     const layer = String(feature?.get?.("layer") || feature?.properties?.layer || "").toLowerCase();
@@ -672,6 +892,95 @@ function refreshProcedureControls() {
   }
 }
 
+function rebuildProcedureFocusContext() {
+  const debugFeatures = procedureDebugSource?.getFeatures?.() ?? [];
+  procedureFocusContext = createProcedureFocusContext(debugFeatures, procedureUiState.selected, deriveProcedureDisplayFromProps);
+  if (procedureFocusContext.selected && procedureFocusContext.airport) return;
+
+  const catalog = mergeProcedureCatalogEntries(procedureUiState.catalog, observedProcedureCatalog.values());
+  const selected = catalog.find((item) => item.key === procedureUiState.selected);
+  if (!selected) return;
+  procedureFocusContext = {
+    ...procedureFocusContext,
+    selected: true,
+    selectedKey: selected.key,
+    airport: selected.airport || null,
+    runway: selected.runway || null,
+    transition: selected.transition || null
+  };
+}
+
+function rebuildChartSpatialContext() {
+  const terminalAirportKey = String(
+    procedureUiState.airport !== "all"
+      ? procedureUiState.airport
+      : (procedureFocusContext.airport || "")
+  ).trim();
+  const airportBBox = terminalAirportKey ? observedAirportBounds.get(terminalAirportKey) ?? null : null;
+  const runwayBBox = terminalAirportKey ? observedAirportRunwayBounds.get(terminalAirportKey) ?? null : null;
+  const terminalFocusBBox = terminalAirportKey
+    ? buildAirportFocusBBox({
+        airportBBox,
+        runwayBBoxes: runwayBBox ? [runwayBBox] : []
+      })
+    : null;
+
+  const selectedProcedureKey = procedureUiState.selected !== "all" ? procedureUiState.selected : null;
+  const procedureBBox = selectedProcedureKey ? observedProcedureBounds.get(selectedProcedureKey) ?? null : null;
+  const procedureLegBBoxes = selectedProcedureKey && procedureDebugSource
+    ? procedureDebugSource.getFeatures()
+        .filter((feature) => deriveProcedureDisplayFromFeature(feature).key === selectedProcedureKey)
+        .map((feature) => getFeatureBBox(feature))
+        .filter(Boolean)
+    : [];
+  const procedureFocusBBox = selectedProcedureKey
+    ? buildProcedureFocusBBox({
+        procedureBBox,
+        procedureLegBBoxes,
+        fallbackBBox: terminalFocusBBox
+      })
+    : null;
+
+  chartSpatialContext = {
+    terminalFocusBBox,
+    terminalContextBBox: terminalFocusBBox ? expandBBox(terminalFocusBBox, 32000) : null,
+    procedureFocusBBox,
+    procedureContextBBox: procedureFocusBBox ? expandBBox(procedureFocusBBox, 22000) : null
+  };
+}
+
+function ensureSpatialFocusLayer() {
+  if (spatialFocusLayer) return;
+  spatialFocusSource = new VectorSource();
+  spatialFocusLayer = new VectorLayer({
+    source: spatialFocusSource,
+    style: new Style({
+      stroke: new Stroke({ color: "rgba(37, 96, 181, 0.9)", width: 2, lineDash: [10, 6] }),
+      fill: new Fill({ color: "rgba(37, 96, 181, 0.04)" }),
+      zIndex: 970
+    })
+  });
+  spatialFocusLayer.setVisible(Boolean(debugEnabled && debugUiState.spatialFocus));
+  map.addLayer(spatialFocusLayer);
+}
+
+function refreshSpatialFocusOverlay() {
+  if (!debugEnabled) return;
+  ensureSpatialFocusLayer();
+  spatialFocusSource.clear();
+  const focusBBox = chartModeState.mode === "PROCEDURE"
+    ? (chartSpatialContext.procedureFocusBBox || chartSpatialContext.terminalFocusBBox)
+    : chartSpatialContext.terminalFocusBBox;
+  if (!focusBBox) {
+    spatialFocusLayer.setVisible(Boolean(debugUiState.spatialFocus));
+    return;
+  }
+  const [minX, minY, maxX, maxY] = focusBBox;
+  const ring = [[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY], [minX, minY]];
+  spatialFocusSource.addFeature(new Feature({ geometry: new Polygon([ring]) }));
+  spatialFocusLayer.setVisible(Boolean(debugUiState.spatialFocus));
+}
+
 function refreshProcedureRendering() {
   procedureUiState.show = Boolean(procShowEl?.checked);
   procedureUiState.airport = procAirportEl?.value || "all";
@@ -683,9 +992,13 @@ function refreshProcedureRendering() {
   procedureUiState.selected = procSelectEl?.value || "all";
   procedureUiState.selectedOnly = Boolean(procSelectedOnlyEl?.checked);
   refreshProcedureControls();
+  rebuildProcedureFocusContext();
+  rebuildChartSpatialContext();
   updateProcedureLayerStatus();
+  refreshSpatialFocusOverlay();
   if (tileLayer) tileLayer.changed();
   if (procedureDebugLayer) procedureDebugLayer.changed();
+  if (issueLayer) issueLayer.changed();
 }
 
 function updateProcedureLayerStatus() {
@@ -703,7 +1016,23 @@ function updateProcedureLayerStatus() {
     const visible = Boolean(debugEnabled && debugUiState.procedureLegColors && procedureUiState.debugLegLayerLoaded);
     procDebugZoomNoteEl.style.display = visible ? "block" : "none";
   }
-  updateViewMaxZoomForDebugInspection();
+  updateViewMaxZoomForInspection();
+  updateChartModeStatus();
+  refreshSpatialFocusOverlay();
+}
+
+function updateChartModeStatus() {
+  if (!chartModeStatusEl) return;
+  const selectedProcedure = procedureUiState.selected === "all" ? "none" : procedureUiState.selected;
+  const labelsText = chartModeState.mode === "ENROUTE"
+    ? "overview labels only"
+    : (chartModeState.mode === "TERMINAL" ? "local labels, procedures only when selected/enabled" : "selected procedure labels only");
+  chartModeStatusEl.textContent = `mode: ${chartModeState.mode} | labels: ${labelsText} | selected procedure: ${selectedProcedure}`;
+  if (chartFocusStatusEl) {
+    const terminalActive = Boolean(chartSpatialContext.terminalFocusBBox);
+    const procedureActive = Boolean(chartSpatialContext.procedureFocusBBox);
+    chartFocusStatusEl.textContent = `spatial focus: terminal ${terminalActive ? "active" : "off"} | procedure ${procedureActive ? "active" : "off"}`;
+  }
 }
 
 async function pickReachableIndexUrl(candidates) {
@@ -740,6 +1069,25 @@ function issueStyle(feature) {
   const type = String(feature.get("type") || "").toLowerCase();
   if (issueFilterSeverity !== "all" && severity !== issueFilterSeverity) return null;
   if (issueFilterType !== "all" && type !== issueFilterType) return null;
+  if (chartModeState.mode === "PROCEDURE") {
+    return severity === "error"
+      ? new Style({
+          image: new CircleStyle({
+            radius: 3.7,
+            fill: new Fill({ color: "rgba(220, 30, 30, 0.52)" }),
+            stroke: new Stroke({ color: "#ffffff", width: 0.95 })
+          }),
+          zIndex: 985
+        })
+      : new Style({
+          image: new CircleStyle({
+            radius: 3.2,
+            fill: new Fill({ color: "rgba(245, 147, 30, 0.45)" }),
+            stroke: new Stroke({ color: "#ffffff", width: 0.85 })
+          }),
+          zIndex: 984
+        });
+  }
   if (debugEnabled && debugUiState.procedureFocus) {
     return severity === "error"
       ? new Style({
@@ -1026,6 +1374,7 @@ function applyDebugVisibility() {
   if (debugArcCenterLayer) debugArcCenterLayer.setVisible(Boolean(debugUiState.arcCenters));
   if (debugSegmentPointLayer) debugSegmentPointLayer.setVisible(Boolean(debugUiState.segmentPoints));
   if (procedureDebugLayer) procedureDebugLayer.setVisible(Boolean(debugUiState.procedureLegColors));
+  if (spatialFocusLayer) spatialFocusLayer.setVisible(Boolean(debugUiState.spatialFocus));
   if (airspaceInspectorEl && !debugUiState.inspector) {
     airspaceInspectorEl.style.display = "none";
     airspaceInspectorEl.innerHTML = "";
@@ -1045,6 +1394,7 @@ function renderDebugLegend() {
   if (debugUiState.airspaceColors) {
     parts.push("airspaces: A dark blue, B cyan, C green, D orange, E purple, restricted red, special-use brown, unknown grey");
   }
+  if (debugUiState.spatialFocus) parts.push("spatial focus bbox overlay enabled");
   debugLegendEl.style.display = parts.length ? "block" : "none";
   debugLegendEl.textContent = parts.join(" | ");
 }
@@ -1084,13 +1434,25 @@ function resetDebugLayers() {
   ensureDebugLayers();
   ensureGeometryDebugLayers();
   ensureProcedureDebugLayer();
+  ensureSpatialFocusLayer();
   debugTileBoundarySource.clear();
   debugTileCountSource.clear();
   debugArcCenterSource.clear();
   debugSegmentPointSource.clear();
   procedureDebugSource.clear();
+  spatialFocusSource.clear();
   procedureDebugFeatureCount = 0;
   procedureUiState.debugLegLayerLoaded = false;
+  observedAirportBounds.clear();
+  observedAirportRunwayBounds.clear();
+  observedProcedureBounds.clear();
+  chartSpatialContext = {
+    terminalFocusBBox: null,
+    terminalContextBBox: null,
+    procedureFocusBBox: null,
+    procedureContextBBox: null
+  };
+  rebuildProcedureFocusContext();
   debugTileBoundaryFeatures.clear();
   debugTileCountFeatures.clear();
   debugTileCountStyleCache.clear();
@@ -1342,6 +1704,8 @@ async function loadProcedureCatalogRemote(loaded, indexUrl) {
   procedureUiState.catalog = resolved?.catalog ?? [];
   procedureUiState.normalLayerLoaded = procedureUiState.catalog.length > 0;
   refreshProcedureControls();
+  rebuildChartSpatialContext();
+  updateProcedureLayerStatus();
   debugLog("procedure catalog loaded", {
     mode: "remote",
     url: resolved?.url ?? null,
@@ -1354,6 +1718,8 @@ async function loadProcedureCatalogLocal() {
   procedureUiState.catalog = resolved?.catalog ?? [];
   procedureUiState.normalLayerLoaded = procedureUiState.catalog.length > 0;
   refreshProcedureControls();
+  rebuildChartSpatialContext();
+  updateProcedureLayerStatus();
   debugLog("procedure catalog loaded", {
     mode: "local",
     name: resolved?.name ?? null,
@@ -1370,6 +1736,7 @@ async function loadProcedureDebugLegsRemote(loaded, indexUrl) {
   procedureDebugFeatureCount = 0;
   if (!loadedLegs) {
     procedureUiState.debugLegLayerLoaded = false;
+    rebuildChartSpatialContext();
     updateProcedureLayerStatus();
     debugLog("procedure debug legs not found for remote dataset");
     return;
@@ -1382,6 +1749,7 @@ async function loadProcedureDebugLegsRemote(loaded, indexUrl) {
   procedureDebugSource.addFeatures(features);
   procedureDebugFeatureCount = features.length;
   procedureUiState.debugLegLayerLoaded = features.length > 0;
+  rebuildProcedureFocusContext();
   refreshProcedureControls();
   updateProcedureLayerStatus();
   debugLog("procedure debug legs loaded", { url: loadedLegs.url, count: features.length });
@@ -1395,6 +1763,7 @@ async function loadProcedureDebugLegsLocal(visualizationIndex = null) {
   procedureDebugFeatureCount = 0;
   if (!loadedLegs) {
     procedureUiState.debugLegLayerLoaded = false;
+    rebuildChartSpatialContext();
     updateProcedureLayerStatus();
     debugLog("procedure debug legs not found in local selection");
     return;
@@ -1407,6 +1776,7 @@ async function loadProcedureDebugLegsLocal(visualizationIndex = null) {
   procedureDebugSource.addFeatures(features);
   procedureDebugFeatureCount = features.length;
   procedureUiState.debugLegLayerLoaded = features.length > 0;
+  rebuildProcedureFocusContext();
   refreshProcedureControls();
   updateProcedureLayerStatus();
   debugLog("procedure debug legs loaded from local files", { name: loadedLegs.name, count: features.length });
@@ -1591,7 +1961,12 @@ function createTileLayer(config) {
     });
   }
 
-  return new VectorTileLayer({ source, style: layerStyle, declutter: true });
+  return new VectorTileLayer({
+    source,
+    style: layerStyle,
+    declutter: true,
+    renderMode: "vector"
+  });
 }
 
 function resolveTileTemplateUrl(indexUrl, tileTemplate) {
@@ -1730,7 +2105,7 @@ async function loadFromRemoteIndex(indexUrl) {
   if (Number.isFinite(Number(tilesIndex.minZoom))) view.setMinZoom(Number(tilesIndex.minZoom));
   if (Number.isFinite(Number(tilesIndex.maxZoom))) {
     activeTileMaxZoom = Number(tilesIndex.maxZoom);
-    view.setMaxZoom(activeTileMaxZoom);
+    updateViewMaxZoomForInspection();
   }
   tileLayer = createTileLayer({
     localMode: false,
@@ -1740,7 +2115,14 @@ async function loadFromRemoteIndex(indexUrl) {
     maxZoom: tilesIndex.maxZoom,
     recenterOnFirstFeature: globalLike
   });
+  activeTileConfig = {
+    localMode: false,
+    remoteTemplate,
+    availableTilesSet,
+    maxZoom: Number(tilesIndex.maxZoom)
+  };
   map.addLayer(tileLayer);
+  tileLayer.setVisible(true);
 
   if (globalLike) {
     if (Number.isFinite(Number(tilesIndex.minZoom))) view.setZoom(Number(tilesIndex.minZoom));
@@ -1753,6 +2135,7 @@ async function loadFromRemoteIndex(indexUrl) {
   await loadProcedureCatalogRemote(loaded, indexUrl);
   await loadProcedureDebugLegsRemote(loaded, indexUrl);
   await loadIssueLayerRemote(loaded, indexUrl);
+  await updateHighZoomInspectionMode();
   setStatus(`Loaded 2D tiles index (${loaded.source}): ${tilesIndexUrl}`);
 }
 
@@ -1786,7 +2169,7 @@ async function loadFromLocalSelection() {
   if (Number.isFinite(Number(tilesIndex.minZoom))) view.setMinZoom(Number(tilesIndex.minZoom));
   if (Number.isFinite(Number(tilesIndex.maxZoom))) {
     activeTileMaxZoom = Number(tilesIndex.maxZoom);
-    view.setMaxZoom(activeTileMaxZoom);
+    updateViewMaxZoomForInspection();
   }
   tileLayer = createTileLayer({
     localMode: true,
@@ -1796,7 +2179,14 @@ async function loadFromLocalSelection() {
     maxZoom: tilesIndex.maxZoom,
     recenterOnFirstFeature: globalLike
   });
+  activeTileConfig = {
+    localMode: true,
+    remoteTemplate: null,
+    availableTilesSet,
+    maxZoom: Number(tilesIndex.maxZoom)
+  };
   map.addLayer(tileLayer);
+  tileLayer.setVisible(true);
 
   if (globalLike) {
     if (Number.isFinite(Number(tilesIndex.minZoom))) view.setZoom(Number(tilesIndex.minZoom));
@@ -1831,6 +2221,7 @@ async function loadFromLocalSelection() {
   await loadProcedureCatalogLocal();
   await loadProcedureDebugLegsLocal(loaded.visualizationIndex);
   await loadIssueLayerLocal(loaded.visualizationIndex);
+  await updateHighZoomInspectionMode();
   setStatus(`Loaded local 2D index with ${localTileFiles.size} files.`);
 }
 
@@ -1887,6 +2278,16 @@ indexFileInput.addEventListener("change", async (ev) => {
 qaShowIssuesEl?.addEventListener("change", () => {
   if (issueLayer) issueLayer.changed();
 });
+chartModeEl?.addEventListener("change", () => {
+  chartModeState.mode = normalizeChartMode(chartModeEl.value);
+  rebuildChartSpatialContext();
+  updateChartModeStatus();
+  refreshSpatialFocusOverlay();
+  updateZoomDebugStatus();
+  if (issueLayer) issueLayer.changed();
+  if (tileLayer) tileLayer.changed();
+  if (procedureDebugLayer) procedureDebugLayer.changed();
+});
 procShowEl?.addEventListener("change", () => {
   refreshProcedureRendering();
 });
@@ -1934,6 +2335,11 @@ map.on("singleclick", (evt) => {
   highlightRelatedEntity(issueFeature);
 });
 
+map.on("moveend", () => {
+  updateZoomDebugStatus();
+  void updateHighZoomInspectionMode();
+});
+
 if (debugEnabled) {
   renderInspectorFeature(null);
 
@@ -1970,6 +2376,10 @@ if (debugEnabled) {
   });
   dbgAirspaceColorsEl?.addEventListener("change", () => {
     debugUiState.airspaceColors = Boolean(dbgAirspaceColorsEl.checked);
+    applyDebugVisibility();
+  });
+  dbgSpatialFocusEl?.addEventListener("change", () => {
+    debugUiState.spatialFocus = Boolean(dbgSpatialFocusEl.checked);
     applyDebugVisibility();
   });
 

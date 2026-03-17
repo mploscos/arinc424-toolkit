@@ -7,7 +7,22 @@ import {
   getDefaultLayerDescriptor,
   isFeatureVisibleAtZoom,
   getLabelRule,
-  getProcedureStyle
+  getProcedureStyle,
+  getAirspaceStyle,
+  getAirwayStyle,
+  categorizeAirspaceFeatureProperties,
+  classifyAirwayTier,
+  CHART_MODE_ENROUTE,
+  CHART_MODE_TERMINAL,
+  CHART_MODE_PROCEDURE,
+  isFeatureVisibleInChartMode,
+  getLabelRuleForChartMode,
+  createProcedureFocusContext,
+  getFeatureBBox,
+  expandBBox,
+  bboxIntersects,
+  buildAirportFocusBBox,
+  buildProcedureFocusBBox
 } from "../src/cartography/index.js";
 
 test("buildCartography groups layers and computes bounds", () => {
@@ -108,11 +123,11 @@ test("visibility and label rules follow chart-like zoom thresholds", () => {
     minZoom: undefined,
     maxZoom: undefined
   };
-  const labelAt5 = getLabelRule(majorAirport, airportDescriptor, 5);
   const labelAt6 = getLabelRule(majorAirport, airportDescriptor, 6);
-  assert.equal(labelAt5.enabled, false);
-  assert.equal(labelAt6.enabled, true);
-  assert.ok(labelAt6.priority > 0);
+  const labelAt7 = getLabelRule(majorAirport, airportDescriptor, 7);
+  assert.equal(labelAt6.enabled, false);
+  assert.equal(labelAt7.enabled, true);
+  assert.ok(labelAt7.priority > 0);
 
   const waypointDescriptor = getDefaultLayerDescriptor("waypoints");
   const minorWaypoint = {
@@ -122,8 +137,8 @@ test("visibility and label rules follow chart-like zoom thresholds", () => {
   };
   assert.equal(isFeatureVisibleAtZoom(minorWaypoint, waypointDescriptor, 10), false);
   assert.equal(isFeatureVisibleAtZoom(minorWaypoint, waypointDescriptor, 11), true);
-  assert.equal(getLabelRule(minorWaypoint, waypointDescriptor, 11).enabled, false);
-  assert.equal(getLabelRule(minorWaypoint, waypointDescriptor, 12).enabled, true);
+  assert.equal(getLabelRule(minorWaypoint, waypointDescriptor, 12).enabled, false);
+  assert.equal(getLabelRule(minorWaypoint, waypointDescriptor, 13).enabled, true);
 
   const procedureDescriptor = getDefaultLayerDescriptor("procedure");
   const approachProcedure = {
@@ -136,8 +151,8 @@ test("visibility and label rules follow chart-like zoom thresholds", () => {
   };
   assert.equal(isFeatureVisibleAtZoom(approachProcedure, procedureDescriptor, 6), false);
   assert.equal(isFeatureVisibleAtZoom(approachProcedure, procedureDescriptor, 7), true);
-  assert.equal(getLabelRule(approachProcedure, procedureDescriptor, 7).enabled, false);
-  assert.equal(getLabelRule(approachProcedure, procedureDescriptor, 8).enabled, true);
+  assert.equal(getLabelRule(approachProcedure, procedureDescriptor, 8).enabled, false);
+  assert.equal(getLabelRule(approachProcedure, procedureDescriptor, 9).enabled, true);
   assert.ok(getProcedureStyle(approachProcedure, 14).width > getProcedureStyle({ properties: { procedureType: "SID" } }, 14).width);
 });
 
@@ -154,4 +169,220 @@ test("deriveProcedureDisplay avoids exposing raw internal ids as labels", () => 
   assert.equal(display.airport, "KPRC");
   assert.equal(display.runway, "RW04");
   assert.equal(display.displayLabel, "PRC1 RW04");
+});
+
+test("airspace semantics use restrained categories instead of one generic style", () => {
+  const restrictive = {
+    properties: { name: "R-123", restrictiveType: "RESTRICTED", importance: "major" }
+  };
+  const terminal = {
+    properties: { name: "CLASS C TEST", airspaceClass: "CLASS C", importance: "major" }
+  };
+  const fallback = {
+    properties: { name: "FIR TEST", importance: "minor" }
+  };
+
+  assert.equal(categorizeAirspaceFeatureProperties(restrictive).category, "restrictive");
+  assert.equal(categorizeAirspaceFeatureProperties(terminal).category, "terminal-controlled");
+  assert.equal(categorizeAirspaceFeatureProperties(fallback).category, "fallback");
+
+  const restrictiveStyle = getAirspaceStyle(restrictive, 9);
+  const terminalStyle = getAirspaceStyle(terminal, 9);
+  assert.notEqual(restrictiveStyle.stroke, terminalStyle.stroke);
+  assert.ok(restrictiveStyle.lineDash);
+  assert.ok(String(terminalStyle.fill).includes("rgba"));
+});
+
+test("airways and labels are visually secondary at overview scales", () => {
+  const majorAirway = {
+    properties: { routeType: "JET", importance: "major", airwayName: "J60" }
+  };
+  const minorAirway = {
+    properties: { routeType: "LOW", importance: "minor", airwayName: "V12" }
+  };
+  const airwayDescriptor = getDefaultLayerDescriptor("airways");
+  const airwayMajorStyle = getAirwayStyle(majorAirway, 8);
+  const airwayMinorStyle = getAirwayStyle(minorAirway, 8);
+
+  assert.equal(classifyAirwayTier(majorAirway), "major");
+  assert.equal(classifyAirwayTier(minorAirway), "minor");
+  assert.ok(airwayMajorStyle.width < 1.5);
+  assert.ok(airwayMinorStyle.width < airwayMajorStyle.width);
+  assert.equal(getLabelRule(minorAirway, airwayDescriptor, 10).enabled, false);
+  assert.equal(getLabelRule(majorAirway, airwayDescriptor, 10).enabled, true);
+});
+
+test("chart modes suppress clutter according to editorial intent", () => {
+  const enrouteAirway = {
+    layer: "airways",
+    properties: { airwayName: "J60", routeType: "JET", importance: "major" }
+  };
+  const terminalWaypoint = {
+    layer: "waypoints",
+    properties: { ident: "DAG", importance: "minor" }
+  };
+  const procedure = {
+    layer: "procedures",
+    properties: { procedureId: "procedure:PD:US:KSNA:STAYY4:4:RW20R", procedureType: "SID" }
+  };
+
+  assert.equal(isFeatureVisibleInChartMode({
+    feature: enrouteAirway,
+    descriptor: getDefaultLayerDescriptor("airways"),
+    zoom: 7,
+    mode: CHART_MODE_ENROUTE
+  }), true);
+  assert.equal(isFeatureVisibleInChartMode({
+    feature: terminalWaypoint,
+    descriptor: getDefaultLayerDescriptor("waypoints"),
+    zoom: 9,
+    mode: CHART_MODE_ENROUTE
+  }), false);
+  assert.equal(isFeatureVisibleInChartMode({
+    feature: procedure,
+    descriptor: getDefaultLayerDescriptor("procedures"),
+    zoom: 10,
+    mode: CHART_MODE_TERMINAL,
+    procedureState: { show: false, selected: "all" }
+  }), false);
+});
+
+test("procedure mode isolates selected procedure and relevant fix labels", () => {
+  const debugLegs = [
+    {
+      properties: {
+        procedureId: "procedure:APP:US:KSNA:ILS20R:1:RW20R",
+        legType: "TF",
+        fixIdent: "STARY"
+      }
+    },
+    {
+      properties: {
+        procedureId: "procedure:APP:US:KSNA:ILS20R:1:RW20R",
+        legType: "RF",
+        fixIdent: "CFIX"
+      }
+    }
+  ];
+  const focus = createProcedureFocusContext(debugLegs, "procedure:APP:US:KSNA:ILS20R:1:RW20R");
+  const selectedProcedure = {
+    layer: "procedures",
+    properties: { procedureId: "procedure:APP:US:KSNA:ILS20R:1:RW20R", procedureType: "APPROACH" }
+  };
+  const otherProcedure = {
+    layer: "procedures",
+    properties: { procedureId: "procedure:APP:US:KSNA:RNAV20R:1:RW20R", procedureType: "APPROACH" }
+  };
+  const focusWaypoint = {
+    layer: "waypoints",
+    properties: { ident: "CFIX", importance: "minor" }
+  };
+
+  assert.equal(isFeatureVisibleInChartMode({
+    feature: selectedProcedure,
+    descriptor: getDefaultLayerDescriptor("procedures"),
+    zoom: 11,
+    mode: CHART_MODE_PROCEDURE,
+    procedureState: { show: true, selected: "procedure:APP:US:KSNA:ILS20R:1:RW20R" },
+    focusContext: focus
+  }), true);
+  assert.equal(isFeatureVisibleInChartMode({
+    feature: otherProcedure,
+    descriptor: getDefaultLayerDescriptor("procedures"),
+    zoom: 11,
+    mode: CHART_MODE_PROCEDURE,
+    procedureState: { show: true, selected: "procedure:APP:US:KSNA:ILS20R:1:RW20R" },
+    focusContext: focus
+  }), false);
+
+  const baseLabel = getLabelRule(focusWaypoint, getDefaultLayerDescriptor("waypoints"), 13);
+  const modeLabel = getLabelRuleForChartMode({
+    feature: focusWaypoint,
+    descriptor: getDefaultLayerDescriptor("waypoints"),
+    baseRule: baseLabel,
+    zoom: 13,
+    mode: CHART_MODE_PROCEDURE,
+    procedureState: { show: true, selected: "procedure:APP:US:KSNA:ILS20R:1:RW20R" },
+    focusContext: focus
+  });
+  assert.equal(modeLabel.enabled, true);
+  assert.ok(modeLabel.priority > baseLabel.priority);
+});
+
+test("spatial helpers build deterministic focus bboxes", () => {
+  const bbox = getFeatureBBox({
+    geometry: { type: "LineString", coordinates: [[1, 2], [3, 5], [2, 4]] }
+  });
+  assert.deepEqual(bbox, [1, 2, 3, 5]);
+  assert.deepEqual(expandBBox([1, 2, 3, 4], 2), [-1, 0, 5, 6]);
+  assert.equal(bboxIntersects([0, 0, 2, 2], [1, 1, 3, 3]), true);
+  assert.equal(bboxIntersects([0, 0, 1, 1], [2, 2, 3, 3]), false);
+
+  const airportFocus = buildAirportFocusBBox({
+    airportBBox: [10, 10, 10.2, 10.1],
+    runwayBBoxes: [[10.05, 10.02, 10.18, 10.04]],
+    airportMargin: 0.3,
+    runwayMargin: 0.1
+  });
+  assert.deepEqual(airportFocus, [9.9, 9.9, 10.299999999999999, 10.2]);
+
+  const procedureFocus = buildProcedureFocusBBox({
+    procedureBBox: [20, 20, 20.4, 20.2],
+    procedureLegBBoxes: [[20.35, 20.15, 20.55, 20.35]],
+    margin: 0.2
+  });
+  assert.deepEqual(procedureFocus, [19.8, 19.8, 20.75, 20.55]);
+});
+
+test("terminal and procedure modes honor spatial context", () => {
+  const terminalAirspace = {
+    layer: "airspaces",
+    bbox: [0, 0, 1, 1],
+    properties: { name: "LOCAL CTR", airspaceClass: "CLASS D", importance: "major" }
+  };
+  const distantAirspace = {
+    layer: "airspaces",
+    bbox: [10, 10, 11, 11],
+    properties: { name: "DISTANT CTA", airspaceClass: "CLASS E", importance: "major" }
+  };
+  const focusWaypoint = {
+    layer: "waypoints",
+    bbox: [0.1, 0.1, 0.1, 0.1],
+    properties: { ident: "CFIX", importance: "minor" }
+  };
+
+  assert.equal(isFeatureVisibleInChartMode({
+    feature: terminalAirspace,
+    descriptor: getDefaultLayerDescriptor("airspaces"),
+    zoom: 9,
+    mode: CHART_MODE_TERMINAL,
+    spatialContext: { terminalFocusBBox: [-1, -1, 2, 2], terminalContextBBox: [-2, -2, 3, 3] }
+  }), true);
+  assert.equal(isFeatureVisibleInChartMode({
+    feature: distantAirspace,
+    descriptor: getDefaultLayerDescriptor("airspaces"),
+    zoom: 9,
+    mode: CHART_MODE_TERMINAL,
+    spatialContext: { terminalFocusBBox: [-1, -1, 2, 2], terminalContextBBox: [-2, -2, 3, 3] }
+  }), false);
+
+  const procedureBaseLabel = getLabelRule(focusWaypoint, getDefaultLayerDescriptor("waypoints"), 13);
+  assert.equal(getLabelRuleForChartMode({
+    feature: focusWaypoint,
+    descriptor: getDefaultLayerDescriptor("waypoints"),
+    baseRule: procedureBaseLabel,
+    zoom: 13,
+    mode: CHART_MODE_PROCEDURE,
+    focusContext: { selected: true, fixIdents: new Set(["CFIX"]) },
+    spatialContext: { procedureFocusBBox: [-1, -1, 2, 2] }
+  }).enabled, true);
+  assert.equal(getLabelRuleForChartMode({
+    feature: focusWaypoint,
+    descriptor: getDefaultLayerDescriptor("waypoints"),
+    baseRule: procedureBaseLabel,
+    zoom: 13,
+    mode: CHART_MODE_PROCEDURE,
+    focusContext: { selected: true, fixIdents: new Set(["CFIX"]) },
+    spatialContext: { procedureFocusBBox: [5, 5, 6, 6] }
+  }).enabled, false);
 });

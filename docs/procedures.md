@@ -2,7 +2,7 @@
 
 `@arinc424/procedures` introduces an incremental implementation of ARINC 424 Attachment 5.
 
-## Phase 2 scope (`0.1.6`)
+## Current scope (`0.1.7`)
 
 Supported path terminators:
 
@@ -61,5 +61,6 @@ Unsupported path terminators are:
 
 - `0.1.5`: Attachment 5 Phase 1 (`IF`, `TF`, `CF`, `DF`)
 - `0.1.6`: `RF` / `AF` arc legs
-- `0.1.7+`: additional leg types and richer procedure composition/debug output
+- `0.1.7`: parser hardening for FAA CIFP / Jeppesen compatibility
+- `0.1.8+`: additional leg types and richer procedure composition/debug output
 - `0.2.0`: substantially completed Attachment 5 geometry engine

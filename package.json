@@ -1,6 +1,6 @@
 {
   "name": "arinc424-toolkit",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "description": "Modular Node.js platform for ARINC 424 canonical parsing, features, tiling and 3D tiles.",
   "type": "module",

@@ -3,7 +3,6 @@ import {
   isVisualizationIndex,
   resolveRelativeAssetUrl
 } from "./visualization-index.js";
-
 const params = new URLSearchParams(window.location.search);
 const defaultIndexUrl = params.get("index") || "";
 const debugEnabled = params.get("debug") === "1";
@@ -70,6 +69,16 @@ const DEBUG_PREFIX = "[arinc-view:cesium]";
 const debugLog = (...args) => { if (debugEnabled) console.log(DEBUG_PREFIX, ...args); };
 const debugWarn = (...args) => { if (debugEnabled) console.warn(DEBUG_PREFIX, ...args); };
 const debugError = (...args) => { if (debugEnabled) console.error(DEBUG_PREFIX, ...args); };
+const SEMANTIC_AIRSPACE_PALETTE = Object.freeze({
+  controlledMajorFill: "rgba(58, 101, 168, 0.055)"
+});
+
+function rgbaStringToCesiumCss(rgba, alphaOverride = null) {
+  const match = /^rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)$/.exec(String(rgba));
+  if (!match) return rgba;
+  const alpha = alphaOverride ?? Number(match[4]);
+  return `rgba(${match[1].trim()},${match[2].trim()},${match[3].trim()},${alpha})`;
+}
 
 function setStatus(msg) {
   statusEl.textContent = msg;
@@ -279,7 +288,7 @@ function styleIssueEntities() {
     const isError = props.severity === "error";
     entity.billboard = undefined;
     entity.point = new Cesium.PointGraphics({
-      pixelSize: isError ? 8 : 6.5,
+      pixelSize: isError ? 7.6 : 6.1,
       color: isError
         ? Cesium.Color.fromCssColorString("#d11d1d").withAlpha(0.95)
         : Cesium.Color.fromCssColorString("#f0a11f").withAlpha(0.88),
@@ -645,7 +654,7 @@ async function loadTileset() {
     await tileset.readyPromise;
     // Keep a chart-like readable 3D presentation without over-styling.
     tileset.style = new Cesium.Cesium3DTileStyle({
-      color: "color('rgba(71,136,209,0.62)')"
+      color: `color('${rgbaStringToCesiumCss(SEMANTIC_AIRSPACE_PALETTE.controlledMajorFill, 0.42)}')`
     });
 
     const usedBounds = await deriveAndLoadBoundsFromArray(bounds);

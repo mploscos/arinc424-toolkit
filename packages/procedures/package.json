@@ -1,6 +1,6 @@
 {
   "name": "@arinc424/procedures",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Incremental Attachment 5 procedure leg decoding and geometry helpers.",
   "type": "module",
   "license": "MIT",
@@ -28,7 +28,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@arinc424/core": "0.1.6"
+    "@arinc424/core": "0.1.7"
   },
   "publishConfig": {
     "access": "public"

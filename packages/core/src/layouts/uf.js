@@ -42,6 +42,7 @@ export function createUfLayout(config, layoutName = "UF") {
       const key = `${firId}|${firAddress}|${firIndicator}`;
       return {
         key,
+        cont,
         seq,
         lat,
         lon,

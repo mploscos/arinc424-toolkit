@@ -13,6 +13,14 @@ function parseImportance(feature) {
   return "unknown";
 }
 
+function firstText(props, fields = []) {
+  for (const field of fields) {
+    const text = String(props?.[field] ?? "").trim();
+    if (text) return text;
+  }
+  return "";
+}
+
 function labelText(feature, fields = []) {
   const props = feature?.properties ?? {};
   for (const field of fields) {
@@ -106,6 +114,97 @@ function classifyLayer(layerHint) {
   return "default";
 }
 
+export const AIRSPACE_STYLE_PALETTE = Object.freeze({
+  controlledMajor: { stroke: "rgba(58, 101, 168, 0.96)", fill: "rgba(58, 101, 168, 0.055)" },
+  controlledMinor: { stroke: "rgba(96, 128, 176, 0.9)", fill: "rgba(96, 128, 176, 0.032)" },
+  terminalMajor: { stroke: "rgba(39, 132, 150, 0.95)", fill: "rgba(39, 132, 150, 0.05)" },
+  terminalMinor: { stroke: "rgba(77, 147, 160, 0.88)", fill: "rgba(77, 147, 160, 0.03)" },
+  specialUse: { stroke: "rgba(134, 98, 52, 0.96)", fill: "rgba(134, 98, 52, 0.05)" },
+  restrictive: { stroke: "rgba(153, 73, 73, 0.98)", fill: "rgba(153, 73, 73, 0.065)" },
+  fallback: { stroke: "rgba(109, 121, 137, 0.88)", fill: "rgba(109, 121, 137, 0.03)" }
+});
+
+export const AIRWAY_STYLE_PALETTE = Object.freeze({
+  major: { stroke: "rgba(120, 134, 149, 0.9)", casing: "rgba(245, 247, 249, 0.78)" },
+  minor: { stroke: "rgba(149, 160, 171, 0.72)", casing: "rgba(245, 247, 249, 0.52)" }
+});
+
+function normalizeTextForMatching(value) {
+  return String(value ?? "").trim().toUpperCase();
+}
+
+export function categorizeAirspaceFeatureProperties(featureOrProps) {
+  const props = featureOrProps?.properties ?? featureOrProps ?? {};
+  const importance = parseImportance(featureOrProps?.properties ? featureOrProps : { properties: props });
+  const restrictiveType = normalizeTextForMatching(props.restrictiveType);
+  const classText = normalizeTextForMatching(firstText(props, [
+    "airspaceClass",
+    "classification",
+    "class",
+    "type",
+    "airspaceType",
+    "usage",
+    "name"
+  ]));
+
+  if (
+    restrictiveType ||
+    /RESTRICT|PROHIB|DANGER/.test(classText)
+  ) {
+    return { category: "restrictive", importance };
+  }
+  if (/MOA|WARNING|ALERT|SPECIAL USE/.test(classText)) {
+    return { category: "special-use", importance };
+  }
+  if (/CLASS B|(^|[^A-Z])B($|[^A-Z])|CLASS C|(^|[^A-Z])C($|[^A-Z])/.test(classText)) {
+    return { category: "terminal-controlled", importance: importance === "unknown" ? "major" : importance };
+  }
+  if (/CLASS D|(^|[^A-Z])D($|[^A-Z])|CLASS E|(^|[^A-Z])E($|[^A-Z])|CTR|TMA|CTA|CONTROL/.test(classText)) {
+    return { category: "controlled", importance };
+  }
+  return { category: "fallback", importance };
+}
+
+function airspacePaletteForCategory(category, importance) {
+  if (category === "restrictive") return AIRSPACE_STYLE_PALETTE.restrictive;
+  if (category === "special-use") return AIRSPACE_STYLE_PALETTE.specialUse;
+  if (category === "terminal-controlled") {
+    return importance === "major" ? AIRSPACE_STYLE_PALETTE.terminalMajor : AIRSPACE_STYLE_PALETTE.terminalMinor;
+  }
+  if (category === "controlled") {
+    return importance === "major" ? AIRSPACE_STYLE_PALETTE.controlledMajor : AIRSPACE_STYLE_PALETTE.controlledMinor;
+  }
+  return AIRSPACE_STYLE_PALETTE.fallback;
+}
+
+export function classifyAirwayTier(featureOrProps) {
+  const props = featureOrProps?.properties ?? featureOrProps ?? {};
+  const importance = parseImportance(featureOrProps?.properties ? featureOrProps : { properties: props });
+  const routeType = normalizeTextForMatching(firstText(props, ["routeType", "airwayType", "classification", "airwayName", "name"]));
+  if (importance === "major") return "major";
+  if (/JET|HIGH|UPPER|\bQ\d|\bJ\d|^Q$|^J$/.test(routeType)) return "major";
+  return "minor";
+}
+
+export function getLabelPriority(feature, descriptor) {
+  const layerClass = classifyLayer(descriptor?.styleHint);
+  const importance = parseImportance(feature);
+  const baseByLayer = {
+    airspace: 120,
+    airport: 98,
+    runway: 70,
+    airway: 54,
+    procedure: 56,
+    waypoint: 24,
+    default: 20
+  };
+  const base = Number.isFinite(descriptor?.label?.priority)
+    ? descriptor.label.priority
+    : (baseByLayer[layerClass] ?? baseByLayer.default);
+  const importanceBoost = importance === "major" ? 18 : (importance === "medium" ? 7 : 0);
+  return base + importanceBoost;
+}
+
 function withAlpha(rgba, alpha) {
   const match = /^rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)$/.exec(String(rgba));
   if (!match) return rgba;
@@ -115,12 +214,12 @@ function withAlpha(rgba, alpha) {
 export function isFeatureVisibleAtZoom(feature, descriptor, zoom) {
   if (!Number.isFinite(zoom)) return true;
   const baseMin = Number.isFinite(feature?.minZoom) ? feature.minZoom : descriptor?.minZoom;
-  const baseMax = Number.isFinite(feature?.maxZoom) ? feature.maxZoom : descriptor?.maxZoom;
+  const baseMax = descriptor?.maxZoom;
 
   const importance = parseImportance(feature);
   const layerClass = classifyLayer(descriptor?.styleHint);
   let minZoom = Number.isFinite(baseMin) ? baseMin : 4;
-  let maxZoom = Number.isFinite(baseMax) ? baseMax : 16;
+  let maxZoom = Number.isFinite(baseMax) ? baseMax : 22;
 
   if (layerClass === "airspace") {
     if (importance === "major") minZoom = Math.max(4, minZoom - 1);
@@ -143,48 +242,49 @@ export function isFeatureVisibleAtZoom(feature, descriptor, zoom) {
 }
 
 export function getAirspaceStyle(feature, zoom) {
-  const importance = parseImportance(feature);
-  const restrictive = Boolean(feature?.properties?.restrictiveType);
+  const { category, importance } = categorizeAirspaceFeatureProperties(feature);
   const large = importance === "major";
-  const borderWidth = zoom >= 11 ? (large ? 1.9 : 1.5) : (large ? 1.6 : 1.2);
-  const baseFill = restrictive
-    ? (large ? "rgba(118, 78, 165, 0.08)" : "rgba(118, 78, 165, 0.05)")
-    : (large ? "rgba(57, 110, 200, 0.06)" : "rgba(57, 110, 200, 0.035)");
+  const palette = airspacePaletteForCategory(category, importance);
+  const borderWidth = zoom >= 11 ? (large ? 1.85 : 1.45) : (large ? 1.55 : 1.15);
   return {
-    stroke: restrictive ? "rgba(118, 78, 165, 0.95)" : "rgba(57, 110, 200, 0.95)",
-    fill: zoom >= 10 ? baseFill : withAlpha(baseFill, large ? 0.045 : 0.03),
-    lineDash: restrictive ? [6, 4] : null,
+    stroke: palette.stroke,
+    fill: zoom >= 10 ? palette.fill : withAlpha(palette.fill, large ? 0.04 : 0.024),
+    lineDash: category === "restrictive" ? [6, 4] : (category === "special-use" ? [4, 4] : null),
     width: borderWidth
   };
 }
 
 export function getAirwayStyle(feature, zoom) {
-  const importance = parseImportance(feature);
-  const major = importance === "major";
+  const major = classifyAirwayTier(feature) === "major";
+  const palette = major ? AIRWAY_STYLE_PALETTE.major : AIRWAY_STYLE_PALETTE.minor;
   return {
-    stroke: major ? "#df7c1d" : "#efa251",
-    casing: major ? "rgba(255, 247, 230, 0.95)" : "rgba(255, 247, 230, 0.7)",
-    width: zoom >= 10 ? (major ? 2.1 : 1.4) : (major ? 1.6 : 1.05),
-    casingWidth: zoom >= 10 ? (major ? 3.4 : 2.1) : (major ? 2.6 : 1.8)
+    stroke: palette.stroke,
+    casing: palette.casing,
+    width: zoom >= 10 ? (major ? 1.7 : 1.15) : (major ? 1.3 : 0.85),
+    casingWidth: zoom >= 10 ? (major ? 2.6 : 1.85) : (major ? 2.1 : 1.45)
   };
 }
 
 export function getAirportStyle(feature, zoom) {
   const major = parseImportance(feature) === "major";
   return {
-    radius: zoom >= 8 ? (major ? 7 : 6) : (major ? 6 : 5),
-    fill: "#1f4f88",
+    radius: zoom >= 10 ? (major ? 6.4 : 5.4) : (major ? 5.8 : 4.8),
+    fill: major ? "#173a68" : "#39618e",
     stroke: "#ffffff",
-    strokeWidth: 1.5
+    strokeWidth: major ? 1.4 : 1.1
   };
 }
 
-export function getWaypointStyle(_feature, zoom) {
+export function getWaypointStyle(feature, zoom) {
+  const major = parseImportance(feature) === "major";
+  const props = feature?.properties ?? {};
+  const layerName = String(props.layerHint ?? props.layer ?? feature?.layer ?? "").toLowerCase();
+  const isNavaid = layerName === "navaid" || layerName === "navaids";
   return {
-    radius: zoom >= 13 ? 3.6 : 2.6,
-    fill: "#19885f",
+    radius: zoom >= 13 ? (major ? 3.1 : 2.5) : (major ? 2.6 : 2.1),
+    fill: isNavaid ? "#5c6491" : "#597b6e",
     stroke: "#ffffff",
-    strokeWidth: 1
+    strokeWidth: 0.9
   };
 }
 
@@ -217,26 +317,24 @@ export function getLabelRule(feature, descriptor, zoom) {
 
   const baseMin = Number.isFinite(descriptor?.label?.minZoom) ? descriptor.label.minZoom : 7;
   const importance = parseImportance(feature);
-  let minZoom = importance === "major" ? Math.max(5, baseMin - 1) : baseMin;
+  let minZoom = importance === "major" ? Math.max(6, baseMin - 1) : baseMin;
   if (layerClass === "waypoint") {
-    minZoom = importance === "major" ? Math.max(minZoom, 11) : Math.max(minZoom, 12);
+    minZoom = importance === "major" ? Math.max(minZoom, 12) : Math.max(minZoom, 13);
+  } else if (layerClass === "airport") {
+    minZoom = importance === "major" ? Math.max(minZoom, 7) : Math.max(minZoom, 8);
   } else if (layerClass === "airway") {
-    minZoom = importance === "major" ? Math.max(minZoom, 8) : Math.max(minZoom, 10);
+    minZoom = importance === "major" ? Math.max(minZoom, 10) : Math.max(minZoom, 11);
   } else if (layerClass === "airspace") {
-    minZoom = importance === "minor" ? Math.max(minZoom, 9) : minZoom;
+    minZoom = importance === "major" ? Math.max(minZoom, 6) : (importance === "minor" ? Math.max(minZoom, 10) : Math.max(minZoom, 8));
   } else if (layerClass === "procedure") {
-    minZoom = Math.max(minZoom, 8);
+    minZoom = Math.max(minZoom, 9);
   }
   if (Number.isFinite(zoom) && zoom < minZoom) return { enabled: false };
 
-  const basePriority = Number.isFinite(descriptor?.label?.priority) ? descriptor.label.priority : 20;
-  const priorityBoost = layerClass === "procedure"
-    ? 6
-    : (importance === "major" ? 20 : (importance === "medium" ? 8 : 0));
   return {
     enabled: true,
     text,
-    priority: basePriority + priorityBoost,
+    priority: getLabelPriority(feature, descriptor),
     minZoom
   };
 }

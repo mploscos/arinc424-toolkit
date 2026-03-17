@@ -94,6 +94,21 @@
       <div style="font-size:11px; margin-top:4px; opacity:0.8">
         Basemap mode: <code>?basemap=muted</code> (default) or <code>?basemap=standard</code>
       </div>
+      <div style="font-size:11px; margin-top:4px; opacity:0.8">
+        Vector layers can be inspected beyond tile max zoom.
+      </div>
+      <div style="font-size:11px; margin-top:8px; border-top:1px solid #d9e2d9; padding-top:6px">
+        <div><strong>Chart mode</strong></div>
+        <label for="chartMode">mode</label>
+        <select id="chartMode">
+          <option value="ENROUTE">ENROUTE</option>
+          <option value="TERMINAL" selected>TERMINAL</option>
+          <option value="PROCEDURE">PROCEDURE</option>
+        </select>
+        <div id="chartModeStatus" style="margin-top:6px; opacity:0.85"></div>
+        <div id="chartFocusStatus" style="margin-top:4px; opacity:0.82"></div>
+        <div id="zoomDebugStatus" style="margin-top:4px; opacity:0.8"></div>
+      </div>
       <div style="font-size:11px; margin-top:8px; border-top:1px solid #d9e2d9; padding-top:6px">
         <div><strong>Procedures</strong></div>
         <label><input id="procShow" type="checkbox" /> show procedures</label><br />
@@ -157,7 +172,8 @@
         <label><input id="dbgProcLegColors" type="checkbox" /> debug procedure leg colors</label><br />
         <label><input id="dbgProcLegOnly" type="checkbox" checked /> show only per-leg debug layer</label><br />
         <label><input id="dbgProcFocus" type="checkbox" /> procedure debug focus mode</label><br />
-        <label><input id="dbgAirspaceColors" type="checkbox" /> debug airspace colors</label>
+        <label><input id="dbgAirspaceColors" type="checkbox" /> debug airspace colors</label><br />
+        <label><input id="dbgSpatialFocus" type="checkbox" /> draw spatial focus bbox</label>
         <div id="debugLegend" style="display:none; margin-top:6px; opacity:0.9"></div>
       </div>
       <div id="airspaceInspector" style="display:none; font-size:11px; margin-top:8px; max-height:220px; overflow:auto; border-top:1px solid #d9e2d9; padding-top:6px"></div>

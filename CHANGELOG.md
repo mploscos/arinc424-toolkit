@@ -43,6 +43,45 @@ All notable changes to this project will be documented in this file.
   - smaller persistent QA issue markers in 2D/3D viewers
   - muted basemap mode for OpenLayers/Cesium so ARINC overlays read more clearly
 
+## 0.1.7 - 2026-03-17
+
+Stabilization release focused on parser robustness, procedure correctness, charting controls, and viewer cleanup.
+
+Improves Jeppesen compatibility without weakening validation, corrects `RF` radius scaling/arc construction, adds procedure-leg debug output, and stabilizes OpenLayers chart modes and high-zoom inspection.
+
+### Changed
+- Workspace package versions aligned to `0.1.7`.
+- Canonical hold IDs now include the real differentiating fields required by Jeppesen `EP` records:
+  - previous: `hold:<icao>:<region>:<fixId>:<duplicate>`
+  - current: `hold:<icao>:<region>:<fixId>:<fixIcao>:<fixSection>:<duplicate>`
+- README and procedure docs updated to reflect `0.1.7` as the current release.
+- OpenLayers now exposes explicit chart modes:
+  - `ENROUTE`
+  - `TERMINAL`
+  - `PROCEDURE`
+- Terminal and procedure chart modes now apply bbox-based spatial focus to suppress distant clutter.
+- High zoom behavior in OpenLayers was simplified:
+  - normal ARINC tiled layer up to tile max zoom
+  - explicit inspection vector layer above tile max zoom
+  - removed overlapping fallback strategies
+
+### Fixed
+- Resolved a real duplicate-ID failure in Jeppesen `EP` hold parsing where valid records shared `region`, `duplicate`, and `fixId` but differed by `fixIcao` / `fixSection`.
+- Corrected `RF` arc radius scaling:
+  - previous: `arcRadiusRaw / 10`
+  - current: `arcRadiusRaw / 1000`
+  - example: `"002070"` -> `2.070 NM`
+- Corrected `RF` arc generation so start/end radii and curvature match the intended local geometry instead of producing oversized arcs.
+- Added `analysis/procedure-legs.geojson` as a per-leg debug artifact for procedure inspection.
+- Improved OpenLayers stability for procedure/debug inspection at high zoom without regenerating a deeper tile pyramid.
+- Preserved strict parser guarantees:
+  - no silent record dropping
+  - no global validation weakening
+  - no speculative canonical ID expansion beyond the proven collision case
+- Confirmed successful full-dataset runs for:
+  - FAA CIFP
+  - Jeppesen
+
 ## 0.1.6 - 2026-03-14
 
 Attachment 5 Phase 2.

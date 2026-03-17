@@ -123,6 +123,13 @@ Debug mode:
 - Cesium: `&debug=1` (index + tileset load traces)
 - Basemap: `&basemap=muted` (default) or `&basemap=standard`
 
+OpenLayers high-zoom behavior is explicit:
+
+- up to tile max zoom: normal ARINC tiled layer
+- above tile max zoom: tiled layer is disabled and an inspection vector layer is used instead
+
+This keeps vector inspection usable without requiring a deeper tile pyramid for the whole dataset.
+
 ## Visual QA Tools
 
 Phase 4A adds a QA issue layer sourced from analysis outputs:
@@ -210,15 +217,19 @@ Dependency direction:
 - Phase 4: viewers, visual QA, and chart-like cartography
 - `0.1.5`: Attachment 5 Phase 1 (`IF`, `TF`, `CF`, `DF`)
 - `0.1.6`: `RF` / `AF` arc legs
-- `0.1.7+`: additional leg types
-- `0.2.0`: reserved for a substantially more complete procedure geometry engine
+- `0.1.7`: parser robustness + dynamic chart modes + spatial focus
+- `0.1.8+`: additional leg types
+- `0.2.0`: substantially more complete Attachment 5 support
 
 ## Current scope notes
 
 - `@arinc424/tiles` implements tile indexing + basic geometry clipping.
 - `@arinc424/tiles` supports optional zoom-dependent simplification via `simplifyToleranceByZoom`.
-- `@arinc424/procedures` is intentionally phase-scoped. In `0.1.6`, `IF`, `TF`, `CF`, `DF`, `RF`, and `AF` are geometry-aware.
+- `@arinc424/procedures` is intentionally phase-scoped. In `0.1.7`, `IF`, `TF`, `CF`, `DF`, `RF`, and `AF` are geometry-aware.
 - Unsupported path terminators are preserved explicitly in metadata and warnings; they are not silently approximated.
+- Parser robustness now covers both FAA CIFP and Jeppesen baseline datasets without relaxing canonical validation rules.
+- OpenLayers is the primary 2D chart/procedure/debug viewer.
+- Chart modes and spatial focus improve readability, but the viewer is still an incremental dynamic charting surface rather than a finished operational chart product.
 
 
 ## Quality Commands
@@ -238,9 +249,9 @@ ARINC UC/UR airspace boundary reconstruction notes: `docs/arinc-airspace-geometr
 Viewer debug and issue QA notes: `docs/view-debug.md`.
 Attachment 5 notes: `docs/procedures.md`.
 
-## Release 0.1.6
+## Release 0.1.7
 
-Version `0.1.6` is the current incremental release with:
+Version `0.1.7` is the current incremental release with:
 
 - workspace package boundaries (`core` -> `features` -> `tiles`/`3dtiles` -> `view`)
 - contract-driven outputs (`canonical.json`, `features.json`, tile/3D tiles indexes)
@@ -250,6 +261,11 @@ Version `0.1.6` is the current incremental release with:
 - airspace debug inspector and geometry debug overlays in OpenLayers (`?debug=1`)
 - new analysis layer (`@arinc424/analysis`) with dataset stats, inspectors, and query helpers
 - extended procedure geometry foundation (`@arinc424/procedures`) for Attachment 5 Phase 2 (`RF`, `AF`)
+- parser hardening for multi-provider ARINC 424 compatibility, including the Jeppesen `EP` hold ID collision fix
+- procedure-leg debug output (`analysis/procedure-legs.geojson`) for Attachment 5 inspection
+- dynamic OpenLayers chart modes (`ENROUTE`, `TERMINAL`, `PROCEDURE`)
+- bbox-based terminal/procedure spatial focus to reduce unrelated clutter
+- explicit high-zoom inspection mode in OpenLayers above tile max zoom
 - OpenLayers remains the 2D chart/procedure/debug viewer; Cesium remains the 3D airspace/volume viewer
 
 For release details, see [CHANGELOG.md](./CHANGELOG.md).
