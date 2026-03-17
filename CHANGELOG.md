@@ -26,8 +26,8 @@ All notable changes to this project will be documented in this file.
   - `arinc related`
   - `arinc validate-relations`
 - New package: `@arinc424/procedures`
-  - Attachment 5 Phase 1 leg decoding and geometry helpers
-  - supported path terminators: `IF`, `TF`, `CF`, `DF`
+  - incremental Attachment 5 leg decoding and geometry helpers
+  - supported path terminators: `IF`, `TF`, `CF`, `DF`, `RF`, `AF`
   - unsupported path terminators preserved explicitly in metadata/warnings
 
 ### Changed
@@ -42,6 +42,26 @@ All notable changes to this project will be documented in this file.
   - subtler airway casing
   - smaller persistent QA issue markers in 2D/3D viewers
   - muted basemap mode for OpenLayers/Cesium so ARINC overlays read more clearly
+
+## 0.1.6 - 2026-03-14
+
+Attachment 5 Phase 2.
+
+Adds `RF` and `AF` arc-leg support to the procedure geometry engine.
+Extends the incremental Attachment 5 surface without changing existing behavior for `IF`, `TF`, `CF`, and `DF`.
+Arc geometry is validated and rendered through the existing viewer pipeline.
+
+### Added
+- Attachment 5 Phase 2 release surface:
+  - `RF` support (constant-radius arc between fixes)
+  - `AF` support (arc-to-fix / DME-style arc)
+  - reusable arc interpolation utilities in `@arinc424/procedures`
+  - continuity/radius warnings for arc legs when geometry is inconsistent
+
+### Changed
+- Workspace package versions aligned to `0.1.6`.
+- `@arinc424/procedures` now preserves and uses center/radius metadata for supported arc legs.
+- Documentation and roadmap updated for incremental `RF` / `AF` support.
 
 ## 0.1.5 - 2026-03-14
 

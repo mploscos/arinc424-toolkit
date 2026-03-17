@@ -134,10 +134,10 @@ test("visibility and label rules follow chart-like zoom thresholds", () => {
     minZoom: undefined,
     maxZoom: undefined
   };
-  assert.equal(isFeatureVisibleAtZoom(approachProcedure, procedureDescriptor, 8), false);
-  assert.equal(isFeatureVisibleAtZoom(approachProcedure, procedureDescriptor, 9), true);
-  assert.equal(getLabelRule(approachProcedure, procedureDescriptor, 9).enabled, false);
-  assert.equal(getLabelRule(approachProcedure, procedureDescriptor, 10).enabled, true);
+  assert.equal(isFeatureVisibleAtZoom(approachProcedure, procedureDescriptor, 6), false);
+  assert.equal(isFeatureVisibleAtZoom(approachProcedure, procedureDescriptor, 7), true);
+  assert.equal(getLabelRule(approachProcedure, procedureDescriptor, 7).enabled, false);
+  assert.equal(getLabelRule(approachProcedure, procedureDescriptor, 8).enabled, true);
   assert.ok(getProcedureStyle(approachProcedure, 14).width > getProcedureStyle({ properties: { procedureType: "SID" } }, 14).width);
 });
 

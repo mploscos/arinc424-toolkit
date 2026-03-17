@@ -29,6 +29,12 @@ function makeSourceRef({ recordType, lineNumber, rawLine, entityType, entityId }
   return { recordType, lineNumber, rawLine, entityType, entityId };
 }
 
+function parseSuppressedNmThousandths(raw) {
+  const text = String(raw ?? "").trim();
+  if (!/^\d+$/.test(text)) return null;
+  return Number(text) / 1000;
+}
+
 function bboxFromCoords(coords) {
   let minLon = Infinity;
   let minLat = Infinity;
@@ -191,6 +197,15 @@ function finalizeDerivedGeometry(model, buckets, options = {}) {
         fixRawId: x.fixId,
         pathTerm: x.pathTerm,
         turnDir: x.turnDir,
+        ...(x.arcRadiusRaw ? { arcRadiusRaw: x.arcRadiusRaw, arcRadiusNm: parseSuppressedNmThousandths(x.arcRadiusRaw) } : {}),
+        ...(x.centerFix ? {
+          centerFixId: resolveFix(x.centerFix, x.centerIcao)?.id ?? null,
+          centerFixRawId: x.centerFix,
+          centerSection: x.centerSection || null
+        } : {}),
+        ...(x.legCodeRaw ? { legCodeRaw: x.legCodeRaw } : {}),
+        ...(x.auxRefBlockRaw ? { auxRefBlockRaw: x.auxRefBlockRaw } : {}),
+        ...(x.navBlockRaw ? { navBlockRaw: x.navBlockRaw } : {}),
         alt1: x.alt1,
         alt2: x.alt2,
         speed: x.speed

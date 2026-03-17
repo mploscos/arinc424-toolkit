@@ -1,8 +1,8 @@
 # Procedures / Attachment 5
 
-`@arinc424/procedures` introduces the first incremental implementation phase for ARINC 424 Attachment 5.
+`@arinc424/procedures` introduces an incremental implementation of ARINC 424 Attachment 5.
 
-## Phase 1 scope (`0.1.5`)
+## Phase 2 scope (`0.1.6`)
 
 Supported path terminators:
 
@@ -10,6 +10,8 @@ Supported path terminators:
 - `TF`
 - `CF`
 - `DF`
+- `RF`
+- `AF`
 
 Unsupported path terminators are:
 
@@ -45,12 +47,14 @@ Unsupported path terminators are:
 }
 ```
 
-## Phase 1 interpretation notes
+## Current interpretation notes
 
 - `IF`: initial fix anchor
 - `TF`: practical line between known fixes
 - `CF`: terminates at fix, currently approximated as anchor-to-fix line with warning metadata
 - `DF`: practical direct-to-fix line
+- `RF`: constant-radius arc between fixes, built from center + radius metadata
+- `AF`: arc-to-fix geometry using resolved center + radius metadata
 - chained legs are checked for geometry continuity and reported with warnings if gaps are detected
 
 ## Roadmap direction

@@ -5,11 +5,11 @@ import { buildIFLeg } from "./legs/build-if.js";
 import { buildTFLeg } from "./legs/build-tf.js";
 import { buildCFLeg } from "./legs/build-cf.js";
 import { buildDFLeg } from "./legs/build-df.js";
+import { buildRFLeg } from "./legs/build-rf.js";
+import { buildAFLeg } from "./legs/build-af.js";
 
-// TODO (0.1.6):
-// Implement arc legs:
-// - RF (constant radius turn)
-// - AF (DME arc)
+// TODO (0.1.7):
+// Implement additional Attachment 5 leg types beyond phase 2 arcs.
 
 function buildUnsupportedLeg(decodedLeg) {
   return {
@@ -17,7 +17,9 @@ function buildUnsupportedLeg(decodedLeg) {
     pathTerminator: decodedLeg.pathTerminator,
     supported: false,
     geometry: null,
+    warnings: [decodedLeg.metadata?.unsupportedReason ?? `Unsupported leg ${decodedLeg.pathTerminator || "UNKNOWN"}`].filter(Boolean),
     metadata: {
+      legType: decodedLeg.pathTerminator,
       ...decodedLeg.metadata,
       preserved: true
     }
@@ -38,11 +40,13 @@ export function buildProcedureGeometry(input, procedureId = null) {
 
   for (const leg of decoded.legs) {
     let built;
+    let legWarnings = [];
     if (!leg.supported) {
       built = buildUnsupportedLeg(leg);
     } else if (leg.pathTerminator === "IF") {
       const result = buildIFLeg(leg);
-      if (result.warning) warnings.push(result.warning);
+      legWarnings = [result.warning].filter(Boolean);
+      for (const item of legWarnings) warnings.push(item);
       currentCoord = result.endCoord ?? currentCoord;
       built = {
         index: leg.index,
@@ -50,11 +54,16 @@ export function buildProcedureGeometry(input, procedureId = null) {
         supported: true,
         geometry: result.geometry,
         bbox: result.bbox,
-        metadata: result.metadata
+        warnings: legWarnings,
+        metadata: {
+          legType: leg.pathTerminator,
+          ...result.metadata
+        }
       };
     } else if (leg.pathTerminator === "TF") {
       const result = buildTFLeg(leg, currentCoord);
-      if (result.warning) warnings.push(result.warning);
+      legWarnings = [result.warning].filter(Boolean);
+      for (const item of legWarnings) warnings.push(item);
       if (result.geometry) lineParts.push(result.geometry.coordinates);
       currentCoord = result.endCoord ?? currentCoord;
       built = {
@@ -63,11 +72,16 @@ export function buildProcedureGeometry(input, procedureId = null) {
         supported: true,
         geometry: result.geometry,
         bbox: result.bbox,
-        metadata: result.metadata
+        warnings: legWarnings,
+        metadata: {
+          legType: leg.pathTerminator,
+          ...result.metadata
+        }
       };
     } else if (leg.pathTerminator === "CF") {
       const result = buildCFLeg(leg, currentCoord);
-      if (result.warning) warnings.push(result.warning);
+      legWarnings = [result.warning].filter(Boolean);
+      for (const item of legWarnings) warnings.push(item);
       if (result.geometry) lineParts.push(result.geometry.coordinates);
       currentCoord = result.endCoord ?? currentCoord;
       built = {
@@ -76,11 +90,16 @@ export function buildProcedureGeometry(input, procedureId = null) {
         supported: true,
         geometry: result.geometry,
         bbox: result.bbox,
-        metadata: result.metadata
+        warnings: legWarnings,
+        metadata: {
+          legType: leg.pathTerminator,
+          ...result.metadata
+        }
       };
     } else if (leg.pathTerminator === "DF") {
       const result = buildDFLeg(leg, currentCoord);
-      if (result.warning) warnings.push(result.warning);
+      legWarnings = [result.warning].filter(Boolean);
+      for (const item of legWarnings) warnings.push(item);
       if (result.geometry) lineParts.push(result.geometry.coordinates);
       currentCoord = result.endCoord ?? currentCoord;
       built = {
@@ -89,7 +108,47 @@ export function buildProcedureGeometry(input, procedureId = null) {
         supported: true,
         geometry: result.geometry,
         bbox: result.bbox,
-        metadata: result.metadata
+        warnings: legWarnings,
+        metadata: {
+          legType: leg.pathTerminator,
+          ...result.metadata
+        }
+      };
+    } else if (leg.pathTerminator === "RF") {
+      const result = buildRFLeg(leg, currentCoord);
+      legWarnings = [result.warning, ...(result.warnings ?? [])].filter(Boolean);
+      for (const item of legWarnings) warnings.push(item);
+      if (result.geometry) lineParts.push(result.geometry.coordinates);
+      currentCoord = result.endCoord ?? currentCoord;
+      built = {
+        index: leg.index,
+        pathTerminator: leg.pathTerminator,
+        supported: true,
+        geometry: result.geometry,
+        bbox: result.bbox,
+        warnings: legWarnings,
+        metadata: {
+          legType: leg.pathTerminator,
+          ...result.metadata
+        }
+      };
+    } else if (leg.pathTerminator === "AF") {
+      const result = buildAFLeg(leg, currentCoord);
+      legWarnings = [result.warning, ...(result.warnings ?? [])].filter(Boolean);
+      for (const item of legWarnings) warnings.push(item);
+      if (result.geometry) lineParts.push(result.geometry.coordinates);
+      currentCoord = result.endCoord ?? currentCoord;
+      built = {
+        index: leg.index,
+        pathTerminator: leg.pathTerminator,
+        supported: true,
+        geometry: result.geometry,
+        bbox: result.bbox,
+        warnings: legWarnings,
+        metadata: {
+          legType: leg.pathTerminator,
+          ...result.metadata
+        }
       };
     } else {
       built = buildUnsupportedLeg(leg);

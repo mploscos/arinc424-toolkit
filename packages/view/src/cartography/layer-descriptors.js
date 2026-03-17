@@ -59,17 +59,17 @@ const DEFAULT_LAYER_DESCRIPTORS = Object.freeze({
     name: "procedures",
     geometryType: "line",
     styleHint: "procedure",
-    minZoom: 9,
+    minZoom: 7,
     maxZoom: 16,
-    label: { enabled: true, minZoom: 10, priority: 52, fields: ["procedureName", "name", "ident", "procedureId", "id"] }
+    label: { enabled: true, minZoom: 8, priority: 52, fields: ["procedureName", "name", "ident", "procedureId", "id"] }
   },
   procedure: {
     name: "procedure",
     geometryType: "line",
     styleHint: "procedure",
-    minZoom: 9,
+    minZoom: 7,
     maxZoom: 16,
-    label: { enabled: true, minZoom: 10, priority: 52, fields: ["procedureName", "name", "ident", "procedureId", "id"] }
+    label: { enabled: true, minZoom: 8, priority: 52, fields: ["procedureName", "name", "ident", "procedureId", "id"] }
   },
   holds: {
     name: "holds",

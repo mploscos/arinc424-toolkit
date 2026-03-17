@@ -2,11 +2,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 import { parseArincFile, writeCanonicalModel } from "@arinc424/core";
 import { buildFeaturesFromCanonical, validateFeatureModel } from "@arinc424/features";
 import { generateTiles, writeTileManifest } from "@arinc424/tiles";
 import { build3DTilesFromFeatures } from "@arinc424/3dtiles";
 import { validateCrossEntityConsistency, buildIssueFeatures } from "@arinc424/analysis";
+import { buildProcedureLegFeatureCollection } from "@arinc424/procedures";
 
 function parseArgs(argv) {
   const args = {
@@ -15,6 +17,10 @@ function parseArgs(argv) {
     dataset: "",
     skipTiles: false,
     skip3dtiles: false,
+    withProcedureLegs: false,
+    procedureLegsAirport: "",
+    procedureLegsType: "",
+    procedureLegsLimit: 0,
     minZoom: 4,
     maxZoom: 10,
     reportName: "report"
@@ -27,6 +33,10 @@ function parseArgs(argv) {
     else if (a === "--dataset") args.dataset = argv[++i] ?? "";
     else if (a === "--skip-tiles") args.skipTiles = true;
     else if (a === "--skip-3dtiles") args.skip3dtiles = true;
+    else if (a === "--with-procedure-legs") args.withProcedureLegs = true;
+    else if (a === "--procedure-legs-airport") args.procedureLegsAirport = argv[++i] ?? "";
+    else if (a === "--procedure-legs-type") args.procedureLegsType = argv[++i] ?? "";
+    else if (a === "--procedure-legs-limit") args.procedureLegsLimit = Number(argv[++i] ?? 0);
     else if (a === "--min-zoom") args.minZoom = Number(argv[++i] ?? 4);
     else if (a === "--max-zoom") args.maxZoom = Number(argv[++i] ?? 10);
     else if (a === "--report-name") args.reportName = argv[++i] ?? "report";
@@ -41,6 +51,9 @@ function parseArgs(argv) {
   if (!Number.isFinite(args.minZoom) || !Number.isFinite(args.maxZoom)) {
     throw new Error("--min-zoom and --max-zoom must be numbers");
   }
+  if (!Number.isFinite(args.procedureLegsLimit) || args.procedureLegsLimit < 0) {
+    throw new Error("--procedure-legs-limit must be a non-negative number");
+  }
   if (args.minZoom > args.maxZoom) {
     throw new Error("--min-zoom cannot be greater than --max-zoom");
   }
@@ -54,11 +67,28 @@ function parseArgs(argv) {
 }
 
 function printUsage() {
-  console.log(`Usage:\n  node scripts/run-large-dataset.mjs \\\n    --input /path/to/FAACIFP18.dat \\\n    --out ./artifacts/faacifp18 \\\n    --dataset FAACIFP18\n\nOptions:\n  --skip-tiles\n  --skip-3dtiles\n  --min-zoom <n>\n  --max-zoom <n>\n  --report-name <baseName>`);
+  console.log(`Usage:\n  node scripts/run-large-dataset.mjs \\\n    --input /path/to/FAACIFP18.dat \\\n    --out ./artifacts/faacifp18 \\\n    --dataset FAACIFP18\n\nOptions:\n  --skip-tiles\n  --skip-3dtiles\n  --with-procedure-legs\n  --procedure-legs-airport <ident>\n  --procedure-legs-type <SID|STAR|APPROACH>\n  --procedure-legs-limit <n>\n  --min-zoom <n>\n  --max-zoom <n>\n  --report-name <baseName>`);
 }
 
 function nowMs() {
   return Number(process.hrtime.bigint()) / 1e6;
+}
+
+function logProgress(stage, message, extra = null) {
+  if (extra && typeof extra === "object" && Object.keys(extra).length > 0) {
+    console.log(`[dataset-run] ${stage}: ${message}`, extra);
+    return;
+  }
+  console.log(`[dataset-run] ${stage}: ${message}`);
+}
+
+function startStage(stage, extra = null) {
+  logProgress(stage, "start", extra);
+  return nowMs();
+}
+
+function endStage(stage, startMs, extra = null) {
+  logProgress(stage, `done in ${(nowMs() - startMs).toFixed(2)} ms`, extra);
 }
 
 function fileSizeSafe(filepath) {
@@ -71,16 +101,17 @@ function fileSizeSafe(filepath) {
 
 function listFilesRecursive(dir) {
   const files = [];
-  function walk(current) {
-    if (!fs.existsSync(current)) return;
+  if (!fs.existsSync(dir)) return files;
+  const stack = [dir];
+  while (stack.length > 0) {
+    const current = stack.pop();
     const entries = fs.readdirSync(current, { withFileTypes: true });
     for (const e of entries) {
       const abs = path.join(current, e.name);
-      if (e.isDirectory()) walk(abs);
+      if (e.isDirectory()) stack.push(abs);
       else if (e.isFile()) files.push(abs);
     }
   }
-  walk(dir);
   return files.sort();
 }
 
@@ -99,21 +130,23 @@ function countBy(arr, keyFn) {
 
 function summarizeTiles(tilesDir) {
   const files = listFilesRecursive(tilesDir).filter((f) => f.endsWith(".json"));
-  const sizes = files.map((f) => fileSizeSafe(f));
-  const largestTileFileSizeBytes = sizes.length ? Math.max(...sizes) : 0;
-  const averageTileFileSizeBytes = sizes.length ? Math.round(sizes.reduce((a, b) => a + b, 0) / sizes.length) : 0;
-
+  let totalSizeBytes = 0;
+  let largestTileFileSizeBytes = 0;
   const byZoom = {};
   for (const file of files) {
+    const size = fileSizeSafe(file);
+    totalSizeBytes += size;
+    if (size > largestTileFileSizeBytes) largestTileFileSizeBytes = size;
     const rel = path.relative(tilesDir, file);
     const m = /^(\d+)\//.exec(rel.replaceAll("\\", "/"));
     if (!m) continue;
     const z = m[1];
     byZoom[z] = (byZoom[z] ?? 0) + 1;
   }
+  const averageTileFileSizeBytes = files.length ? Math.round(totalSizeBytes / files.length) : 0;
 
   return {
-    directorySizeBytes: dirSizeBytes(tilesDir),
+    directorySizeBytes: totalSizeBytes,
     tileFileCount: files.length,
     largestTileFileSizeBytes,
     averageTileFileSizeBytes,
@@ -291,6 +324,42 @@ function toReadmeSnippet(report) {
   return `${lines.join("\n")}\n`;
 }
 
+function normalizeProcedureTypeFilter(value) {
+  const token = String(value || "").trim().toUpperCase();
+  if (!token) return "";
+  if (token === "SID") return "SID";
+  if (token === "STAR") return "STAR";
+  if (token === "APPROACH" || token === "APP") return "APPROACH";
+  return token;
+}
+
+function canonicalProcedureCategory(procedure) {
+  const raw = String(procedure?.procedureType || "").trim().toUpperCase();
+  if (raw === "APPROACH" || raw === "APP") return "APPROACH";
+  if (raw === "STAR" || raw === "PE") return "STAR";
+  if (raw === "SID" || raw === "PD") return "SID";
+  return raw;
+}
+
+function filterProceduresForDebug(canonical, args) {
+  const airportFilter = String(args.procedureLegsAirport || "").trim().toUpperCase();
+  const typeFilter = normalizeProcedureTypeFilter(args.procedureLegsType);
+  const limit = Number(args.procedureLegsLimit || 0);
+  const procedures = canonical.entities?.procedures ?? [];
+  const filtered = procedures.filter((procedure) => {
+    if (airportFilter) {
+      const airportId = String(procedure?.airportId || "").toUpperCase();
+      const airportIdent = airportId.split(":").at(-1) || airportId;
+      if (airportIdent !== airportFilter) return false;
+    }
+    if (typeFilter) {
+      if (canonicalProcedureCategory(procedure) !== typeFilter) return false;
+    }
+    return true;
+  });
+  return limit > 0 ? filtered.slice(0, limit) : filtered;
+}
+
 async function main() {
   const args = parseArgs(process.argv);
 
@@ -304,6 +373,7 @@ async function main() {
   const tilesDir = path.join(args.out, "tiles");
   const threeDTilesDir = path.join(args.out, "3dtiles");
   const analysisDir = path.join(args.out, "analysis");
+  const procedureLegsPath = path.join(analysisDir, "procedure-legs.geojson");
 
   const report = {
     run: {
@@ -329,7 +399,7 @@ async function main() {
 
   const totalStart = nowMs();
 
-  const canonicalStart = nowMs();
+  const canonicalStart = startStage("parse/canonical", { input: args.input, out: canonicalPath });
   const canonical = await parseArincFile(args.input, { generatedAt: null });
   writeCanonicalModel(canonical, canonicalPath);
   const canonicalEnd = nowMs();
@@ -344,8 +414,13 @@ async function main() {
     totalEntities: Object.values(entityCounts).reduce((a, b) => a + b, 0),
     entityCounts
   };
+  endStage("parse/canonical", canonicalStart, {
+    output: canonicalPath,
+    sizeBytes: report.stages.canonical.outputFileSizeBytes,
+    totalEntities: report.stages.canonical.totalEntities
+  });
 
-  const featuresStart = nowMs();
+  const featuresStart = startStage("features", { out: featuresPath });
   const featureModel = buildFeaturesFromCanonical(canonical, { generatedAt: null });
   validateFeatureModel(featureModel);
   fs.writeFileSync(featuresPath, `${JSON.stringify(featureModel, null, 2)}\n`, "utf8");
@@ -357,22 +432,101 @@ async function main() {
     totalFeatureCount: featureModel.features.length,
     featureCountsByLayer: countBy(featureModel.features, (f) => f.layer)
   };
+  endStage("features", featuresStart, {
+    output: featuresPath,
+    sizeBytes: report.stages.features.outputFileSizeBytes,
+    featureCount: report.stages.features.totalFeatureCount
+  });
 
+  const consistencyStart = startStage("consistency", { out: path.join(analysisDir, "consistency.json") });
   const consistency = validateCrossEntityConsistency(canonical);
+  endStage("consistency", consistencyStart, {
+    valid: consistency.valid,
+    errors: consistency.errors.length,
+    warnings: consistency.warnings.length
+  });
+
+  const issuesStart = startStage("issues", { out: path.join(analysisDir, "issues.geojson") });
   const issues = buildIssueFeatures(canonical, consistency);
+  endStage("issues", issuesStart, {
+    issueCount: issues.summary?.issueCount ?? issues.features?.length ?? 0,
+    errorCount: issues.summary?.errorCount ?? consistency.errors.length,
+    warningCount: issues.summary?.warningCount ?? consistency.warnings.length
+  });
+
+  let procedureLegs = null;
+  let procedureLegSelectionCount = 0;
+  if (args.withProcedureLegs) {
+    const selectedProcedures = filterProceduresForDebug(canonical, args);
+    procedureLegSelectionCount = selectedProcedures.length;
+    const procedureLegsStart = startStage("procedure-legs", {
+      out: procedureLegsPath,
+      selectedProcedures: procedureLegSelectionCount,
+      airportFilter: args.procedureLegsAirport || null,
+      typeFilter: normalizeProcedureTypeFilter(args.procedureLegsType) || null,
+      limit: args.procedureLegsLimit || null
+    });
+    let lastProcedureLegProgressLog = 0;
+    procedureLegs = buildProcedureLegFeatureCollection(
+      {
+        ...canonical,
+        entities: {
+          ...canonical.entities,
+          procedures: selectedProcedures
+        }
+      },
+      {
+        progressEveryProcedures: 5000,
+        onProgress: ({ processedProcedures, totalProcedures, processedLegs, emittedFeatures }) => {
+          const now = nowMs();
+          if ((now - lastProcedureLegProgressLog) < 250 && processedProcedures !== totalProcedures) return;
+          lastProcedureLegProgressLog = now;
+          logProgress("procedure-legs", "progress", {
+            processedProcedures,
+            totalProcedures,
+            processedLegs,
+            emittedFeatures
+          });
+        }
+      }
+    );
+    endStage("procedure-legs", procedureLegsStart, {
+      selectedProcedures: procedureLegSelectionCount,
+      featureCount: procedureLegs.features?.length ?? 0
+    });
+  } else {
+    try {
+      fs.rmSync(procedureLegsPath, { force: true });
+    } catch {
+      // ignore stale debug artifact cleanup failures
+    }
+    logProgress("procedure-legs", "skipped", { reason: "Use --with-procedure-legs to generate debug leg output" });
+  }
+  const analysisWriteStart = startStage("analysis-write", { out: analysisDir });
   writeJson(path.join(analysisDir, "consistency.json"), consistency);
   writeJson(path.join(analysisDir, "issues.geojson"), issues);
+  if (procedureLegs) {
+    writeJson(procedureLegsPath, procedureLegs);
+  }
+  endStage("analysis-write", analysisWriteStart, {
+    issueCount: issues.summary?.issueCount ?? issues.features?.length ?? 0,
+    procedureLegCount: procedureLegs?.features?.length ?? 0
+  });
   report.stages.analysis = {
     valid: consistency.valid,
     errorCount: consistency.errors.length,
     warningCount: consistency.warnings.length,
-    issueCount: issues.summary?.issueCount ?? issues.features?.length ?? 0
+    issueCount: issues.summary?.issueCount ?? issues.features?.length ?? 0,
+    procedureLegsGenerated: Boolean(procedureLegs),
+    procedureLegCount: procedureLegs?.features?.length ?? 0,
+    procedureLegSelectionCount
   };
 
   if (args.skipTiles) {
+    logProgress("tiles", "skipped", { reason: "--skip-tiles" });
     report.stages.tiles = { skipped: true, reason: "--skip-tiles" };
   } else {
-    const tilesStart = nowMs();
+    const tilesStart = startStage("tiles", { out: tilesDir, minZoom: args.minZoom, maxZoom: args.maxZoom });
     const { manifest } = generateTiles(featureModel, {
       outDir: tilesDir,
       minZoom: args.minZoom,
@@ -389,19 +543,25 @@ async function main() {
       maxZoom: args.maxZoom,
       ...summarizeTiles(tilesDir)
     };
+    endStage("tiles", tilesStart, {
+      tileCount: report.stages.tiles.tileFileCount,
+      zoomRange: `${report.stages.tiles.minZoom}..${report.stages.tiles.maxZoom}`
+    });
   }
 
   if (args.skip3dtiles) {
+    logProgress("3dtiles", "skipped", { reason: "--skip-3dtiles" });
     report.stages.threeDTiles = { skipped: true, reason: "--skip-3dtiles" };
   } else {
     const airspaceCount = featureModel.features.filter((f) => f.layer === "airspaces").length;
     if (airspaceCount === 0) {
+      logProgress("3dtiles", "skipped", { reason: "No airspaces layer features available for 3D tiles generation" });
       report.stages.threeDTiles = {
         skipped: true,
         reason: "No airspaces layer features available for 3D tiles generation"
       };
     } else {
-      const threeDStart = nowMs();
+      const threeDStart = startStage("3dtiles", { out: threeDTilesDir, airspaceCount });
       build3DTilesFromFeatures(featureModel, { outDir: threeDTilesDir, mode: "tileset" });
       const threeDEnd = nowMs();
       report.stages.threeDTiles = {
@@ -409,6 +569,10 @@ async function main() {
         durationMs: threeDEnd - threeDStart,
         ...summarize3DTiles(threeDTilesDir)
       };
+      endStage("3dtiles", threeDStart, {
+        emittedFiles: report.stages.threeDTiles.emittedFileCount,
+        tilesetJsonSizeBytes: report.stages.threeDTiles.tilesetJsonSizeBytes
+      });
     }
   }
 
@@ -424,6 +588,11 @@ async function main() {
     consistency: "./analysis/consistency.json",
     issues: "./analysis/issues.geojson"
   };
+  if (procedureLegs) {
+    outputs.debug = {
+      procedureLegs: "./analysis/procedure-legs.geojson"
+    };
+  }
 
   if (!report.stages.tiles.skipped) {
     const tilesIndexPath = path.join(tilesDir, "index.json");
@@ -474,10 +643,17 @@ async function main() {
   };
   const visualizationIndexPath = path.join(args.out, "visualization.index.json");
 
+  const reportsStart = startStage("reports", {
+    reportJsonPath,
+    reportMdPath,
+    snippetPath,
+    visualizationIndexPath
+  });
   writeJson(reportJsonPath, report);
   fs.writeFileSync(reportMdPath, toMarkdown(report), "utf8");
   fs.writeFileSync(snippetPath, toReadmeSnippet(report), "utf8");
   writeJson(visualizationIndexPath, visualizationIndex);
+  endStage("reports", reportsStart);
 
   console.log(`[dataset-run] complete: ${args.dataset}`);
   console.log(`[dataset-run] report json: ${reportJsonPath}`);
@@ -486,7 +662,15 @@ async function main() {
   console.log(`[dataset-run] viz index:   ${visualizationIndexPath}`);
 }
 
-main().catch((err) => {
-  console.error(err?.stack || String(err));
-  process.exit(1);
-});
+const isEntrypoint = process.argv[1]
+  ? import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+  : false;
+
+if (isEntrypoint) {
+  main().catch((err) => {
+    console.error(err?.stack || String(err));
+    process.exit(1);
+  });
+}
+
+export { summarizeTiles, listFilesRecursive };

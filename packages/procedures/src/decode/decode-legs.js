@@ -1,4 +1,10 @@
-const SUPPORTED_PATH_TERMINATORS = new Set(["IF", "TF", "CF", "DF"]);
+const SUPPORTED_PATH_TERMINATORS = new Set(["IF", "TF", "CF", "DF", "RF", "AF"]);
+
+function parseSuppressedNmThousandths(raw) {
+  const text = String(raw ?? "").trim();
+  if (!/^\d+$/.test(text)) return null;
+  return Number(text) / 1000;
+}
 
 function buildFixCoordLookup(canonicalModel) {
   const map = new Map();
@@ -42,6 +48,7 @@ export function decodeProcedureLegs(input, procedureId = null) {
       warnings.push(`Unsupported path terminator ${pathTerminator || "UNKNOWN"} at leg ${index}`);
     }
     const fixCoord = leg.fixId ? (fixLookup.get(leg.fixId) ?? null) : null;
+    const centerCoord = leg.centerFixId ? (fixLookup.get(leg.centerFixId) ?? null) : null;
     return {
       index,
       seq: Number(leg.seq ?? index + 1),
@@ -50,11 +57,23 @@ export function decodeProcedureLegs(input, procedureId = null) {
       fixId: leg.fixId ?? null,
       fixRawId: leg.fixRawId ?? null,
       fixCoord,
+      centerFixId: leg.centerFixId ?? null,
+      centerFixRawId: leg.centerFixRawId ?? null,
+      centerCoord,
+      arcRadiusRaw: leg.arcRadiusRaw ?? null,
+      radiusNm: Number.isFinite(Number(leg.arcRadiusNm))
+        ? Number(leg.arcRadiusNm)
+        : parseSuppressedNmThousandths(leg.arcRadiusRaw),
       turnDir: leg.turnDir ?? null,
       alt1: leg.alt1 ?? null,
       alt2: leg.alt2 ?? null,
       speed: leg.speed ?? null,
-      metadata: supported ? {} : { unsupportedReason: `Path terminator ${pathTerminator || "UNKNOWN"} is not implemented in phase 1` }
+      metadata: supported ? {
+        ...(leg.centerSection ? { centerSection: leg.centerSection } : {}),
+        ...(leg.navBlockRaw ? { navBlockRaw: leg.navBlockRaw } : {}),
+        ...(leg.auxRefBlockRaw ? { auxRefBlockRaw: leg.auxRefBlockRaw } : {}),
+        ...(leg.legCodeRaw ? { legCodeRaw: leg.legCodeRaw } : {})
+      } : { unsupportedReason: `Path terminator ${pathTerminator || "UNKNOWN"} is not implemented in current phase` }
     };
   });
 

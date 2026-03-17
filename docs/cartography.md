@@ -93,6 +93,14 @@ OpenLayers viewer consumes cartography descriptors for:
 - zoom visibility (`minZoom`/`maxZoom`)
 - label rules (candidate fields + min zoom)
 
+Viewer responsibility split:
+
+- OpenLayers: 2D chart/procedure/debug viewer
+- Cesium: 3D airspace/volume viewer
+
+Procedure rendering is intentionally kept in OpenLayers.
+Cesium should prioritize volumetric context, selected overlays, and QA rather than dense generic procedure polylines.
+
 Chart-like zoom behavior (approximate):
 
 - zoom 4-6: major airspaces + major airports + selected airways

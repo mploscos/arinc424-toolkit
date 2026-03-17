@@ -9,7 +9,7 @@ export function buildCFLeg(decodedLeg, startCoord) {
     metadata: {
       ...decodedLeg.metadata,
       role: "course-to-fix",
-      approximation: "Phase 1 approximates CF as anchor-to-fix line; course-origin reconstruction is pending"
+      approximation: "Current implementation approximates CF as anchor-to-fix line; course-origin reconstruction is pending"
     },
     endCoord,
     warning: geometry ? "CF leg approximated as straight line to fix" : `CF leg ${decodedLeg.index} could not be built because start or end fix is unresolved`

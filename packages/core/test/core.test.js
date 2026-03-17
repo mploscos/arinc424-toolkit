@@ -51,6 +51,30 @@ function makeER(route, seq, fixId) {
   return a.join("");
 }
 
+function makePDRF(seq, procId, transitionId, fixId, centerFix, arcRadiusRaw) {
+  const a = blankLine();
+  a[0] = "S";
+  a[4] = "P";
+  a[12] = "D";
+  put(a, 7, 10, "KJFK");
+  put(a, 11, 12, "US");
+  put(a, 14, 19, procId);
+  put(a, 20, 20, "1");
+  put(a, 21, 25, transitionId);
+  put(a, 27, 29, String(seq).padStart(3, "0"));
+  put(a, 30, 34, fixId);
+  put(a, 35, 36, "US");
+  put(a, 37, 38, "PC");
+  put(a, 39, 39, "1");
+  put(a, 44, 44, "L");
+  put(a, 48, 49, "RF");
+  put(a, 57, 62, arcRadiusRaw);
+  put(a, 107, 111, centerFix);
+  put(a, 112, 113, "US");
+  put(a, 114, 116, "PC");
+  return a.join("");
+}
+
 test("parseArincText builds canonical model with robust IDs and refs", async () => {
   const text = [
     "HDR FAACIFP TEST",
@@ -92,4 +116,24 @@ test("validateCanonicalModel rejects invalid payloads with clear errors", () => 
       }
     })
   );
+});
+
+test("parseArincText decodes RF ARC Radius using suppressed thousandths", async () => {
+  const text = [
+    "HDR FAACIFP TEST",
+    makePA(),
+    makeEA("START", "N40450000", "W073460000"),
+    makeEA("ENDRF", "N40460000", "W073450000"),
+    makeEA("CTRRF", "N40455000", "W073455000"),
+    makePDRF(1, "RFDBG1", "RW04", "START", "CTRRF", "002070"),
+    makePDRF(2, "RFDBG1", "RW04", "ENDRF", "CTRRF", "002070")
+  ].join("\n");
+
+  const model = await parseArincText(text);
+  const proc = model.entities.procedures.find((item) => item.procedureCode === "RFDBG1");
+  assert.ok(proc);
+  const rf = proc.legs.find((leg) => leg.pathTerm === "RF");
+  assert.ok(rf);
+  assert.equal(rf.arcRadiusRaw, "002070");
+  assert.equal(rf.arcRadiusNm, 2.07);
 });

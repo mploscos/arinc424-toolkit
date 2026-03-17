@@ -9,7 +9,7 @@ const DEFAULT_ZOOM_RULES = {
   navaids: [8, 14],
   airways: [7, 12],
   airspaces: [4, 12],
-  procedures: [10, 15],
+  procedures: [8, 15],
   holds: [11, 15]
 };
 

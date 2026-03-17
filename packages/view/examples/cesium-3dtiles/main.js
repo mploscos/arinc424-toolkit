@@ -19,11 +19,6 @@ const qaSeverityEl = document.getElementById("qaSeverity");
 const qaTypeEl = document.getElementById("qaType");
 const qaStatsEl = document.getElementById("qaStats");
 const issueInspectorEl = document.getElementById("issueInspector");
-const procShowEl = document.getElementById("procShow");
-const procAirportEl = document.getElementById("procAirport");
-const procRunwayEl = document.getElementById("procRunway");
-const procTypeEl = document.getElementById("procType");
-const procSelectEl = document.getElementById("procSelect");
 
 indexInput.value = defaultIndexUrl || "/artifacts/<dataset>/visualization.index.json";
 
@@ -71,16 +66,6 @@ let issueDataSource = null;
 let issueEntities = [];
 let issueFeaturesRaw = [];
 let selectedIssueEntity = null;
-let procedureDataSource = null;
-let procedureEntities = [];
-const procedureUiState = {
-  show: false,
-  airport: "all",
-  runway: "all",
-  type: "all",
-  selected: "all",
-  catalog: []
-};
 const DEBUG_PREFIX = "[arinc-view:cesium]";
 const debugLog = (...args) => { if (debugEnabled) console.log(DEBUG_PREFIX, ...args); };
 const debugWarn = (...args) => { if (debugEnabled) console.warn(DEBUG_PREFIX, ...args); };
@@ -88,146 +73,6 @@ const debugError = (...args) => { if (debugEnabled) console.error(DEBUG_PREFIX, 
 
 function setStatus(msg) {
   statusEl.textContent = msg;
-}
-
-function isProcedureFeature(feature) {
-  const layer = String(feature?.layer || feature?.properties?.layer || "").toLowerCase();
-  return layer === "procedure" || layer === "procedures";
-}
-
-function parseProcedureIdParts(rawId) {
-  const text = String(rawId ?? "").trim();
-  if (!text) return {};
-  const parts = text.split(":");
-  if (parts[0] !== "procedure") return {};
-  return {
-    routeType: parts[1] ?? null,
-    airportIdent: parts[3] ?? null,
-    ident: parts[4] ?? null,
-    runwayToken: parts[6] ?? null
-  };
-}
-
-function normalizeProcedureCategory(rawType) {
-  const raw = String(rawType ?? "").trim().toUpperCase();
-  if (["APPROACH", "APP", "IAP", "PA", "PF", "PI"].includes(raw)) return "APPROACH";
-  if (["SID", "PD", "PE"].includes(raw)) return "SID";
-  if (["STAR", "STARS", "PS"].includes(raw)) return "STAR";
-  return raw || "PROCEDURE";
-}
-
-function procedureKindFromProps(props = {}) {
-  const raw = normalizeProcedureCategory(props.procedureType ?? props.routeType ?? props.type);
-  if (raw === "APPROACH") return "approach";
-  if (raw === "SID") return "sid";
-  if (raw === "STAR") return "star";
-  return "procedure";
-}
-
-function deriveProcedureDisplayFromProps(props = {}) {
-  const parsed = parseProcedureIdParts(props.procedureId ?? props.id);
-  const category = normalizeProcedureCategory(props.procedureType ?? props.routeType ?? parsed.routeType);
-  const ident = String(props.procedureName ?? props.name ?? props.ident ?? parsed.ident ?? "").trim();
-  const runwayRaw = String(props.runway ?? props.runwayName ?? props.runwayId ?? parsed.runwayToken ?? "").trim();
-  const runway = runwayRaw.replace(/^runway:/i, "");
-  const transition = String(props.transition ?? props.transitionId ?? "").trim();
-  const airportRaw = String(props.airportIdent ?? props.airportId ?? parsed.airportIdent ?? "").trim();
-  const airport = airportRaw.replace(/^airport:[A-Z0-9]+:/i, "");
-  const parts = [];
-  if (ident) parts.push(ident);
-  if (runway) parts.push(runway);
-  if (transition && transition !== runway) parts.push(transition);
-  return {
-    key: String(props.procedureId ?? props.id ?? ident ?? transition ?? runway ?? category),
-    category,
-    ident: ident || null,
-    airport: airport || null,
-    runway: runway || null,
-    transition: transition || null,
-    displayLabel: parts.join(" ") || ident || transition || runway || `${category} procedure`
-  };
-}
-
-function procedureMetaFromEntity(entity) {
-  const props = entity?.properties ?? {};
-  return deriveProcedureDisplayFromProps({
-    procedureId: props.procedureId?.getValue?.() ?? props.procedureId ?? props.id?.getValue?.() ?? props.id,
-    id: props.id?.getValue?.() ?? props.id,
-    procedureType: props.procedureType?.getValue?.() ?? props.procedureType ?? props.routeType?.getValue?.() ?? props.routeType,
-    procedureName: props.procedureName?.getValue?.() ?? props.procedureName,
-    name: props.name?.getValue?.() ?? props.name,
-    ident: props.ident?.getValue?.() ?? props.ident,
-    transitionId: props.transitionId?.getValue?.() ?? props.transitionId,
-    runwayId: props.runwayId?.getValue?.() ?? props.runwayId,
-    airportId: props.airportId?.getValue?.() ?? props.airportId
-  });
-}
-
-function procedureMatchesFilters(meta) {
-  if (procedureUiState.airport !== "all" && meta.airport !== procedureUiState.airport) return false;
-  if (procedureUiState.runway !== "all" && meta.runway !== procedureUiState.runway) return false;
-  if (procedureUiState.type !== "all" && meta.category !== procedureUiState.type) return false;
-  return true;
-}
-
-function procedureIsSelected(meta) {
-  return procedureUiState.selected !== "all" && meta.key === procedureUiState.selected;
-}
-
-function setSelectOptions(selectEl, values, currentValue = "all", formatter = (value) => value) {
-  if (!selectEl) return;
-  selectEl.innerHTML = "";
-  const all = document.createElement("option");
-  all.value = "all";
-  all.textContent = "all";
-  selectEl.appendChild(all);
-  for (const value of values) {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = formatter(value);
-    selectEl.appendChild(option);
-  }
-  selectEl.value = values.includes(currentValue) || currentValue === "all" ? currentValue : "all";
-}
-
-function refreshProcedureControls() {
-  const catalog = procedureUiState.catalog.slice();
-  setSelectOptions(procAirportEl, [...new Set(catalog.map((item) => item.airport).filter(Boolean))].sort((a, b) => a.localeCompare(b)), procedureUiState.airport);
-  setSelectOptions(procRunwayEl, [...new Set(catalog.map((item) => item.runway).filter(Boolean))].sort((a, b) => a.localeCompare(b)), procedureUiState.runway);
-  if (procSelectEl) {
-    const current = procedureUiState.selected || "all";
-    const filtered = catalog
-      .filter((item) => {
-        if (procedureUiState.airport !== "all" && item.airport !== procedureUiState.airport) return false;
-        if (procedureUiState.runway !== "all" && item.runway !== procedureUiState.runway) return false;
-        if (procedureUiState.type !== "all" && item.category !== procedureUiState.type) return false;
-        return true;
-      })
-      .sort((a, b) => a.displayLabel.localeCompare(b.displayLabel));
-    procSelectEl.innerHTML = "";
-    const all = document.createElement("option");
-    all.value = "all";
-    all.textContent = "all";
-    procSelectEl.appendChild(all);
-    for (const item of filtered) {
-      const option = document.createElement("option");
-      option.value = item.key;
-      option.textContent = item.displayLabel;
-      procSelectEl.appendChild(option);
-    }
-    procSelectEl.value = filtered.some((item) => item.key === current) || current === "all" ? current : "all";
-    if (procSelectEl.value !== current) procedureUiState.selected = procSelectEl.value;
-  }
-}
-
-function refreshProcedureRendering() {
-  procedureUiState.show = Boolean(procShowEl?.checked);
-  procedureUiState.airport = procAirportEl?.value || "all";
-  procedureUiState.runway = procRunwayEl?.value || "all";
-  procedureUiState.type = procTypeEl?.value || "all";
-  procedureUiState.selected = procSelectEl?.value || "all";
-  refreshProcedureControls();
-  styleProcedureEntities();
 }
 
 async function pickReachableIndexUrl(candidates) {
@@ -336,6 +181,64 @@ function parseBbox(value) {
   return null;
 }
 
+function centerOfBbox(bbox) {
+  const parsed = parseBbox(bbox);
+  if (!parsed) return null;
+  const [minLon, minLat, maxLon, maxLat] = parsed;
+  return [(minLon + maxLon) / 2, (minLat + maxLat) / 2];
+}
+
+function deriveIssuePointGeometry(feature) {
+  const geometry = feature?.geometry ?? null;
+  if (geometry?.type === "Point" && Array.isArray(geometry.coordinates) && geometry.coordinates.length >= 2) {
+    const [lon, lat] = geometry.coordinates;
+    if (Number.isFinite(lon) && Number.isFinite(lat)) return geometry;
+  }
+
+  const featureBbox = parseBbox(feature?.bbox);
+  const propertyBbox = parseBbox(feature?.properties?.bbox);
+  const center = centerOfBbox(featureBbox ?? propertyBbox);
+  if (!center) return null;
+  return {
+    type: "Point",
+    coordinates: center
+  };
+}
+
+function normalizeIssueGeoJsonForCesium(geojson) {
+  const rawFeatures = Array.isArray(geojson?.features) ? geojson.features : [];
+  let renderableCount = 0;
+  let renderedErrors = 0;
+  let renderedWarnings = 0;
+
+  const normalizedFeatures = rawFeatures.map((feature) => {
+    const derivedGeometry = deriveIssuePointGeometry(feature);
+    const severity = String(feature?.properties?.severity || "").toLowerCase();
+    if (derivedGeometry) {
+      renderableCount += 1;
+      if (severity === "error") renderedErrors += 1;
+      if (severity === "warning") renderedWarnings += 1;
+    }
+    return {
+      ...feature,
+      geometry: derivedGeometry
+    };
+  });
+
+  return {
+    normalized: {
+      type: "FeatureCollection",
+      features: normalizedFeatures
+    },
+    debug: {
+      totalIssuesLoaded: rawFeatures.length,
+      issuesWithRenderableGeometry: renderableCount,
+      errorsRendered: renderedErrors,
+      warningsRendered: renderedWarnings
+    }
+  };
+}
+
 function applyIssueFilters() {
   const show = qaShowIssuesEl ? Boolean(qaShowIssuesEl.checked) : true;
   const severityFilter = qaSeverityEl?.value || "all";
@@ -365,57 +268,9 @@ async function clearIssueDataSource() {
   renderIssueInspector(null);
 }
 
-async function clearProcedureDataSource() {
-  if (procedureDataSource) {
-    await viewer.dataSources.remove(procedureDataSource, true);
-    procedureDataSource = null;
-  }
-  procedureEntities = [];
-}
-
-function styleProcedureEntities() {
-  for (const entity of procedureEntities) {
-    const meta = procedureMetaFromEntity(entity);
-    const kind = procedureKindFromProps({ procedureType: meta.category });
-    const selected = procedureIsSelected(meta);
-    const visible = procedureUiState.show && procedureMatchesFilters(meta);
-    const shouldShow = selected || visible;
-    entity.show = shouldShow;
-    if (entity.polyline) {
-      entity.polyline.material = Cesium.Color.fromCssColorString("#ff00ff").withAlpha(selected ? 0.94 : 0.22);
-      entity.polyline.width = selected
-        ? (kind === "approach" ? 3.2 : (kind === "star" ? 2 : 2.5))
-        : (kind === "approach" ? 2.2 : (kind === "star" ? 1.3 : 1.6));
-      entity.polyline.clampToGround = true;
-    }
-    if (entity.point) {
-      entity.point.pixelSize = selected ? 5 : 3;
-      entity.point.color = Cesium.Color.fromCssColorString("#ff00ff").withAlpha(selected ? 0.92 : 0.2);
-      entity.point.outlineColor = Cesium.Color.WHITE;
-      entity.point.outlineWidth = 1;
-      entity.point.disableDepthTestDistance = Number.POSITIVE_INFINITY;
-    }
-  }
-}
-
-async function applyProcedureGeoJson(geojson, meta = {}) {
-  await clearProcedureDataSource();
-  const proceduresOnly = {
-    type: "FeatureCollection",
-    features: (geojson?.features ?? []).filter(isProcedureFeature)
-  };
-  procedureUiState.catalog = proceduresOnly.features.map((feature) => deriveProcedureDisplayFromProps(feature.properties ?? feature));
-  refreshProcedureControls();
-  if (proceduresOnly.features.length === 0) {
-    debugLog("procedure overlay empty", meta);
-    return;
-  }
-  procedureDataSource = await Cesium.GeoJsonDataSource.load(proceduresOnly, { clampToGround: true });
-  viewer.dataSources.add(procedureDataSource);
-  procedureEntities = procedureDataSource.entities.values.slice();
-  styleProcedureEntities();
-  debugLog("procedure overlay loaded", { ...meta, featureCount: proceduresOnly.features.length });
-}
+// TODO (future Cesium procedure work):
+// Represent only selected high-value procedures as 3D-friendly ribbons/corridors or similar forms.
+// Avoid reintroducing dense generic ground-clamped procedure polyline overlays here.
 
 function styleIssueEntities() {
   for (const entity of issueEntities) {
@@ -424,8 +279,10 @@ function styleIssueEntities() {
     const isError = props.severity === "error";
     entity.billboard = undefined;
     entity.point = new Cesium.PointGraphics({
-      pixelSize: isError ? 8 : 6,
-      color: isError ? Cesium.Color.fromCssColorString("#d11d1d") : Cesium.Color.fromCssColorString("#f5931e"),
+      pixelSize: isError ? 8 : 6.5,
+      color: isError
+        ? Cesium.Color.fromCssColorString("#d11d1d").withAlpha(0.95)
+        : Cesium.Color.fromCssColorString("#f0a11f").withAlpha(0.88),
       outlineColor: Cesium.Color.WHITE,
       outlineWidth: isError ? 1.5 : 1.1,
       disableDepthTestDistance: Number.POSITIVE_INFINITY
@@ -476,14 +333,21 @@ async function applyIssueGeoJson(geojson, meta = {}) {
     debugLog("qa issues empty", meta);
     return;
   }
-  issueDataSource = await Cesium.GeoJsonDataSource.load(geojson, { clampToGround: true });
+  const normalized = normalizeIssueGeoJsonForCesium(geojson);
+  issueDataSource = await Cesium.GeoJsonDataSource.load(normalized.normalized, { clampToGround: true });
   viewer.dataSources.add(issueDataSource);
   issueEntities = issueDataSource.entities.values.slice();
   styleIssueEntities();
   refreshIssueTypeOptions();
   updateIssueStats();
   applyIssueFilters();
-  debugLog("qa issues loaded", { ...meta, issueCount: issueFeaturesRaw.length });
+  debugLog("qa issues loaded", {
+    ...meta,
+    totalIssuesLoaded: normalized.debug.totalIssuesLoaded,
+    issuesWithRenderableGeometry: normalized.debug.issuesWithRenderableGeometry,
+    errorsRendered: normalized.debug.errorsRendered,
+    warningsRendered: normalized.debug.warningsRendered
+  });
 }
 
 function dedupe(arr) {
@@ -519,43 +383,6 @@ async function tryLoadIssueGeoJsonRemote(loaded, indexUrl) {
     }
   }
   return null;
-}
-
-async function tryLoadProcedureFeaturesRemote(loaded, indexUrl) {
-  const candidates = [];
-  if (loaded?.visualizationIndexUrl) {
-    candidates.push(resolveRelativeAssetUrl(loaded.visualizationIndexUrl, "./features.json"));
-  }
-  if (loaded?.threeDTilesIndexUrl) {
-    candidates.push(resolveRelativeAssetUrl(loaded.threeDTilesIndexUrl, "../features.json"));
-  }
-  if (indexUrl) candidates.push(resolveRelativeAssetUrl(indexUrl, "./features.json"));
-
-  for (const url of dedupe(candidates)) {
-    try {
-      const r = await fetch(url);
-      if (r.status === 404) {
-        debugLog("procedure feature fetch 404 (treated as absent)", { url });
-        continue;
-      }
-      if (!r.ok) continue;
-      const json = await r.json();
-      if (Array.isArray(json?.features)) return { url, json };
-    } catch {
-      // continue
-    }
-  }
-  return null;
-}
-
-async function loadProcedureLayerRemote(loaded, indexUrl) {
-  const procedureLoaded = await tryLoadProcedureFeaturesRemote(loaded, indexUrl);
-  if (!procedureLoaded) {
-    await clearProcedureDataSource();
-    debugLog("procedure overlay not found for remote dataset");
-    return;
-  }
-  await applyProcedureGeoJson(procedureLoaded.json, { url: procedureLoaded.url, mode: "remote" });
 }
 
 async function tryLoadIssueGeoJsonLocal(visualizationIndex = null) {
@@ -834,10 +661,8 @@ async function loadTileset() {
 
     if (hasLocal) {
       await loadIssueLayerLocal(localSelection?.visualizationIndex ?? null);
-      await clearProcedureDataSource();
     } else if (remoteLoaded) {
       const indexUrl = indexInput.value.trim();
-      await loadProcedureLayerRemote(remoteLoaded, indexUrl);
       await loadIssueLayerRemote(remoteLoaded, indexUrl);
     }
   } catch (err) {
@@ -881,21 +706,6 @@ indexFileInput.addEventListener("change", async (ev) => {
 
 qaShowIssuesEl?.addEventListener("change", () => {
   applyIssueFilters();
-});
-procShowEl?.addEventListener("change", () => {
-  refreshProcedureRendering();
-});
-procAirportEl?.addEventListener("change", () => {
-  refreshProcedureRendering();
-});
-procRunwayEl?.addEventListener("change", () => {
-  refreshProcedureRendering();
-});
-procTypeEl?.addEventListener("change", () => {
-  refreshProcedureRendering();
-});
-procSelectEl?.addEventListener("change", () => {
-  refreshProcedureRendering();
 });
 qaSeverityEl?.addEventListener("change", () => {
   applyIssueFilters();

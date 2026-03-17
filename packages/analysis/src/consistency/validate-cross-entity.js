@@ -1,5 +1,6 @@
 import { validateCanonicalModel } from "@arinc424/core";
 import { buildLookups } from "../relations/build-lookups.js";
+import { resolveAirportReference, resolveFixReference } from "../relations/resolve-entities.js";
 
 /**
  * Validate cross-entity consistency in canonical model relations.
@@ -14,15 +15,27 @@ export function validateCrossEntityConsistency(canonicalModel) {
 
   for (const runway of canonicalModel.entities.runways ?? []) {
     const airportId = runway?.refs?.airportId ?? runway?.airportId;
-    if (airportId && !lookups.airportsById.has(airportId)) {
+    const resolution = resolveAirportReference(lookups, airportId);
+    if (airportId && !resolution.resolved) {
+      if (resolution.matchType === "ambiguous-ident") {
+        warnings.push(`Runway ${runway.id} references ambiguous airport ${airportId}`);
+        warnings.push(...resolution.warnings.map((warning) => `Runway ${runway.id}: ${warning}`));
+        continue;
+      }
       errors.push(`Runway ${runway.id} references missing airport ${airportId}`);
     }
   }
 
   for (const procedure of canonicalModel.entities.procedures ?? []) {
     const airportId = procedure?.airportId ?? procedure?.refs?.airportId;
-    if (airportId && !lookups.airportsById.has(airportId)) {
+    const airportResolution = resolveAirportReference(lookups, airportId);
+    if (airportId && !airportResolution.resolved) {
+      if (airportResolution.matchType === "ambiguous-ident") {
+        warnings.push(`Procedure ${procedure.id} references ambiguous airport ${airportId}`);
+        warnings.push(...airportResolution.warnings.map((warning) => `Procedure ${procedure.id}: ${warning}`));
+      } else {
       errors.push(`Procedure ${procedure.id} references missing airport ${airportId}`);
+      }
     }
 
     if (procedure?.runwayId && !lookups.runwaysById.has(procedure.runwayId)) {
@@ -30,32 +43,71 @@ export function validateCrossEntityConsistency(canonicalModel) {
     }
 
     const fixIds = procedure?.refs?.fixIds ?? [];
-    const missingFixes = fixIds.filter((fixId) => !lookups.waypointsById.has(fixId) && !lookups.navaidsById.has(fixId));
-    for (const fixId of missingFixes) {
-      errors.push(`Procedure ${procedure.id} references missing fix ${fixId}`);
+    for (const fixId of fixIds) {
+      const resolution = resolveFixReference(lookups, fixId);
+      if (!resolution.resolved) {
+        if (resolution.matchType === "ambiguous-ident") {
+          warnings.push(`Procedure ${procedure.id} references ambiguous fix ${fixId}`);
+          warnings.push(...resolution.warnings.map((warning) => `Procedure ${procedure.id}: ${warning}`));
+        } else {
+          errors.push(`Procedure ${procedure.id} references missing fix ${fixId}`);
+        }
+      }
     }
 
-    const rawCount = Array.isArray(procedure?.refs?.fixRawIds) ? procedure.refs.fixRawIds.length : 0;
-    if (rawCount > fixIds.length) {
-      warnings.push(`Procedure ${procedure.id} has unresolved raw fixes (${rawCount - fixIds.length})`);
+    const rawFixIds = Array.isArray(procedure?.refs?.fixRawIds) ? procedure.refs.fixRawIds : [];
+    const unresolvedRawFixes = rawFixIds.filter((rawFixId) => {
+      const resolution = resolveFixReference(lookups, rawFixId);
+      if (!resolution.resolved && resolution.matchType === "ambiguous-ident") {
+        warnings.push(`Procedure ${procedure.id} references ambiguous raw fix ${rawFixId}`);
+        warnings.push(...resolution.warnings.map((warning) => `Procedure ${procedure.id}: ${warning}`));
+        return false;
+      }
+      return !resolution.resolved;
+    });
+    if (unresolvedRawFixes.length > 0) {
+      warnings.push(`Procedure ${procedure.id} has unresolved raw fixes (${unresolvedRawFixes.length})`);
     }
   }
 
   for (const airway of canonicalModel.entities.airways ?? []) {
     const segFixIds = airway?.refs?.segmentFixIds ?? [];
     const segRaw = airway?.refs?.segmentFixRaw ?? [];
-    const missingFixes = segFixIds.filter((fixId) => !lookups.waypointsById.has(fixId) && !lookups.navaidsById.has(fixId));
-    for (const fixId of missingFixes) {
-      errors.push(`Airway ${airway.id} references missing segment fix ${fixId}`);
+    for (const fixId of segFixIds) {
+      const resolution = resolveFixReference(lookups, fixId);
+      if (!resolution.resolved) {
+        if (resolution.matchType === "ambiguous-ident") {
+          warnings.push(`Airway ${airway.id} references ambiguous segment fix ${fixId}`);
+          warnings.push(...resolution.warnings.map((warning) => `Airway ${airway.id}: ${warning}`));
+        } else {
+          errors.push(`Airway ${airway.id} references missing segment fix ${fixId}`);
+        }
+      }
     }
-    if (segRaw.length > segFixIds.length) {
-      warnings.push(`Airway ${airway.id} has unresolved raw fixes (${segRaw.length - segFixIds.length})`);
+
+    const unresolvedSegmentRaw = segRaw.filter((rawFixId) => {
+      const resolution = resolveFixReference(lookups, rawFixId);
+      if (!resolution.resolved && resolution.matchType === "ambiguous-ident") {
+        warnings.push(`Airway ${airway.id} references ambiguous raw fix ${rawFixId}`);
+        warnings.push(...resolution.warnings.map((warning) => `Airway ${airway.id}: ${warning}`));
+        return false;
+      }
+      return !resolution.resolved;
+    });
+    if (unresolvedSegmentRaw.length > 0) {
+      warnings.push(`Airway ${airway.id} has unresolved raw fixes (${unresolvedSegmentRaw.length})`);
     }
   }
 
   for (const hold of canonicalModel.entities.holds ?? []) {
     const fixId = hold?.fixId ?? hold?.refs?.fixId;
-    if (fixId && !lookups.waypointsById.has(fixId) && !lookups.navaidsById.has(fixId)) {
+    const resolution = resolveFixReference(lookups, fixId);
+    if (fixId && !resolution.resolved) {
+      if (resolution.matchType === "ambiguous-ident") {
+        warnings.push(`Hold ${hold.id} references ambiguous fix ${fixId}`);
+        warnings.push(...resolution.warnings.map((warning) => `Hold ${hold.id}: ${warning}`));
+        continue;
+      }
       errors.push(`Hold ${hold.id} references missing fix ${fixId}`);
     }
   }

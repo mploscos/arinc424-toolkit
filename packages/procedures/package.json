@@ -1,7 +1,7 @@
 {
   "name": "@arinc424/procedures",
-  "version": "0.1.5",
-  "description": "Attachment 5 phase 1 procedure leg decoding and geometry helpers.",
+  "version": "0.1.6",
+  "description": "Incremental Attachment 5 procedure leg decoding and geometry helpers.",
   "type": "module",
   "license": "MIT",
   "main": "./src/index.js",
@@ -28,7 +28,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@arinc424/core": "0.1.5"
+    "@arinc424/core": "0.1.6"
   },
   "publishConfig": {
     "access": "public"

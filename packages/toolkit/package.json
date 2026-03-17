@@ -1,12 +1,16 @@
 {
   "name": "@arinc424/toolkit",
-  "version": "0.1.5",
-  "description": "Convenience metapackage bundling core, features, tiles, 3D tiles, and view APIs.",
+  "version": "0.1.6",
+  "description": "Convenience metapackage bundling core, features, procedures, analysis, tiles, 3D tiles, view APIs, and the arinc CLI.",
   "type": "module",
   "license": "MIT",
   "main": "./src/index.js",
+  "bin": {
+    "arinc": "./bin/arinc.js"
+  },
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./cli": "./src/cli.js"
   },
   "repository": {
     "type": "git",
@@ -25,17 +29,18 @@
     "toolkit"
   ],
   "files": [
+    "bin",
     "src",
     "README.md"
   ],
   "dependencies": {
-    "@arinc424/3dtiles": "0.1.5",
-    "@arinc424/analysis": "0.1.5",
-    "@arinc424/core": "0.1.5",
-    "@arinc424/features": "0.1.5",
-    "@arinc424/procedures": "0.1.5",
-    "@arinc424/tiles": "0.1.5",
-    "@arinc424/view": "0.1.5"
+    "@arinc424/3dtiles": "0.1.6",
+    "@arinc424/analysis": "0.1.6",
+    "@arinc424/core": "0.1.6",
+    "@arinc424/features": "0.1.6",
+    "@arinc424/procedures": "0.1.6",
+    "@arinc424/tiles": "0.1.6",
+    "@arinc424/view": "0.1.6"
   },
   "publishConfig": {
     "access": "public"

@@ -93,7 +93,7 @@ export function isFeatureVisibleAtZoom(feature, descriptor, zoom) {
   } else if (layerClass === "runway") {
     minZoom = Math.max(minZoom, 10);
   } else if (layerClass === "procedure") {
-    minZoom = Math.max(minZoom, 9);
+    minZoom = Math.max(minZoom, 7);
   }
   return zoom >= minZoom && zoom <= maxZoom;
 }
@@ -116,7 +116,7 @@ export function getLabelRule(feature, descriptor, zoom, fallbackMinZoom = 7) {
   } else if (layerClass === "airspace") {
     minZoom = importance === "minor" ? Math.max(minZoom, 9) : minZoom;
   } else if (layerClass === "procedure") {
-    minZoom = Math.max(minZoom, 10);
+    minZoom = Math.max(minZoom, 8);
   }
   if (Number.isFinite(zoom) && zoom < minZoom) return { enabled: false };
 

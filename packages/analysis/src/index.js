@@ -13,6 +13,7 @@ export { filterByLayer } from "./query/filter-by-layer.js";
 export { filterByBbox } from "./query/filter-by-bbox.js";
 
 export { buildLookups } from "./relations/build-lookups.js";
+export { resolveAirportReference, resolveFixReference } from "./relations/resolve-entities.js";
 export { buildRelations } from "./relations/build-relations.js";
 export { buildAirportRelations, buildRunwayRelations } from "./relations/airports.js";
 export { buildAirwayRelations } from "./relations/airways.js";

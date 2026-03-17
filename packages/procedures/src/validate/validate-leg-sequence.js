@@ -26,12 +26,17 @@ export function validateProcedureLegSequence(input, procedureId = null) {
       continue;
     }
 
-    if (!hasAnchor && ["TF", "CF", "DF"].includes(leg.pathTerminator)) {
+    if (!hasAnchor && ["TF", "CF", "DF", "RF", "AF"].includes(leg.pathTerminator)) {
       warnings.push(`Leg ${leg.index} (${leg.pathTerminator}) has no explicit IF anchor before it; geometry will use previous fix if available`);
     }
 
     if (!leg.fixId) {
       errors.push(`Leg ${leg.index} (${leg.pathTerminator}) is missing fixId`);
+    }
+
+    if (["RF", "AF"].includes(leg.pathTerminator)) {
+      if (!leg.centerFixId) warnings.push(`Leg ${leg.index} (${leg.pathTerminator}) is missing center fix`);
+      if (!(Number(leg.radiusNm) > 0)) warnings.push(`Leg ${leg.index} (${leg.pathTerminator}) is missing radius`);
     }
 
     hasAnchor = hasAnchor || Boolean(leg.fixId);

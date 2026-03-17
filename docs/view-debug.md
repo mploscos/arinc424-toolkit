@@ -28,15 +28,25 @@ npm run dataset:run -- \
 
 - `analysis/consistency.json`
 - `analysis/issues.geojson`
+- `analysis/procedure-legs.geojson` only if `--with-procedure-legs` is explicitly enabled
 - `visualization.index.json` with `outputs.qa`
 
+`procedure-legs.geojson` is a debug artifact for Path Terminator inspection. For large datasets it should usually be generated selectively with filters such as `--procedure-legs-airport`, `--procedure-legs-type`, and `--procedure-legs-limit`.
+
 3. Viewers load `visualization.index.json` and then resolve QA assets from `outputs.qa`.
+   If procedure-leg debug output was generated, the same index also exposes `outputs.debug.procedureLegs`.
+   If that debug entry is absent, OpenLayers keeps the normal aggregated procedure layer and does not try to fake per-leg debug styling.
 
 Recommended viewer workflow:
 
 - Prefer direct URL loading from `/artifacts/<dataset>/visualization.index.json`
 - Or use **Select visualization.index.json** so the viewer resolves the served artifact URL automatically
 - If automatic resolution fails, paste the `/artifacts/<dataset>/visualization.index.json` URL manually
+
+Viewer roles:
+
+- OpenLayers: 2D chart-style viewer for procedures, tiled GeoJSON inspection, and debug overlays
+- Cesium: 3D airspace / volume viewer with lightweight QA issue visualization
 
 ## OpenLayers QA Layer
 
@@ -67,6 +77,14 @@ Severity styling:
 
 - `error`: red point
 - `warning`: orange point
+
+Cesium intentionally does not render the dense generic procedure polyline overlay anymore.
+That responsibility stays in OpenLayers, where 2D chart-style filtering and procedure inspection are more useful and cheaper to render.
+
+Future direction:
+
+- selected procedures may later be represented in Cesium as higher-value 3D forms such as ribbons/corridors
+- dense generic procedure polylines are intentionally avoided in the 3D viewer
 
 ## Notes
 

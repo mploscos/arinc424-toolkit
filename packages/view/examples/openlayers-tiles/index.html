@@ -112,10 +112,26 @@
           <option value="STAR">STAR</option>
           <option value="APPROACH">APPROACH</option>
         </select>
+        <label for="procTransition">transition</label>
+        <select id="procTransition">
+          <option value="all">all</option>
+        </select><br />
+        <label for="procName">procedure</label>
+        <input id="procName" type="text" placeholder="ident / name / internal id" style="max-width:180px" />
         <label for="procSelect">procedure</label>
         <select id="procSelect">
           <option value="all">all</option>
         </select>
+        <label for="procLegType">leg</label>
+        <select id="procLegType">
+          <option value="all">all</option>
+        </select><br />
+        <label><input id="procSelectedOnly" type="checkbox" /> selected procedure only</label>
+        <div id="procLayerStatus" style="margin-top:6px; opacity:0.85"></div>
+        <div id="procDebugNotice" style="margin-top:4px; color:#8a3b00; display:none"></div>
+        <div id="procDebugZoomNote" style="margin-top:4px; color:#35563f; display:none">
+          Procedure debug layer is vector-based and can be inspected beyond tile max zoom.
+        </div>
       </div>
       <div style="font-size:11px; margin-top:8px; border-top:1px solid #d9e2d9; padding-top:6px">
         <div><strong>Visual QA</strong></div>
@@ -137,7 +153,12 @@
         <label><input id="dbgInspector" type="checkbox" checked /> airspace inspector</label><br />
         <label><input id="dbgArcCenters" type="checkbox" /> arc centers</label><br />
         <label><input id="dbgSegmentPoints" type="checkbox" /> segment points</label><br />
-        <label><input id="dbgTileGrid" type="checkbox" checked /> tile grid</label>
+        <label><input id="dbgTileGrid" type="checkbox" checked /> tile grid</label><br />
+        <label><input id="dbgProcLegColors" type="checkbox" /> debug procedure leg colors</label><br />
+        <label><input id="dbgProcLegOnly" type="checkbox" checked /> show only per-leg debug layer</label><br />
+        <label><input id="dbgProcFocus" type="checkbox" /> procedure debug focus mode</label><br />
+        <label><input id="dbgAirspaceColors" type="checkbox" /> debug airspace colors</label>
+        <div id="debugLegend" style="display:none; margin-top:6px; opacity:0.9"></div>
       </div>
       <div id="airspaceInspector" style="display:none; font-size:11px; margin-top:8px; max-height:220px; overflow:auto; border-top:1px solid #d9e2d9; padding-top:6px"></div>
       <div id="issueInspector" style="display:none; font-size:11px; margin-top:8px; max-height:220px; overflow:auto; border-top:1px solid #d9e2d9; padding-top:6px"></div>

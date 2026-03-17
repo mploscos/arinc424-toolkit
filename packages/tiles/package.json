@@ -1,6 +1,6 @@
 {
   "name": "@arinc424/tiles",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Pure Node.js tiling pipeline for ARINC-derived geospatial features.",
   "type": "module",
   "license": "MIT",
@@ -28,7 +28,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@arinc424/features": "0.1.5"
+    "@arinc424/features": "0.1.6"
   },
   "publishConfig": {
     "access": "public"

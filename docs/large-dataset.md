@@ -29,9 +29,27 @@ Optional flags:
 
 - `--skip-tiles`
 - `--skip-3dtiles`
+- `--with-procedure-legs`
+- `--procedure-legs-airport <ident>`
+- `--procedure-legs-type <SID|STAR|APPROACH>`
+- `--procedure-legs-limit <n>`
 - `--min-zoom <n>`
 - `--max-zoom <n>`
 - `--report-name <name>`
+
+`procedure-legs.geojson` is a debug artifact for Path Terminator inspection and is intentionally disabled by default for large datasets.
+Enable it selectively, for example:
+
+```bash
+npm run dataset:run -- \
+  --input /path/to/FAACIFP18.dat \
+  --out ./artifacts/test \
+  --dataset TEST \
+  --with-procedure-legs \
+  --procedure-legs-airport KJFK \
+  --procedure-legs-type APPROACH \
+  --procedure-legs-limit 25
+```
 
 ## Stages exercised
 
@@ -54,6 +72,10 @@ For output directory `./artifacts/test`:
 - `3dtiles/` (unless `--skip-3dtiles` or no 3D-eligible features)
   - `tileset.json`
   - `index.json`
+- `analysis/`
+  - `consistency.json`
+  - `issues.geojson`
+  - `procedure-legs.geojson` only when `--with-procedure-legs`
 - `<report-name>.json` (default: `report.json`)
 - `<report-name>.md` (default: `report.md`)
 - `readme-snippet.md`

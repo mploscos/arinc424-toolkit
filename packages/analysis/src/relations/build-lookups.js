@@ -25,6 +25,25 @@ function indexByIdent(items, pickIdent = (x) => x.ident) {
   return out;
 }
 
+function indexFixesByIdent(waypoints = [], navaids = []) {
+  const out = new Map();
+  const add = (entityType, item) => {
+    const ident = String(item?.ident ?? "").trim().toUpperCase();
+    if (!ident) return;
+    if (!out.has(ident)) out.set(ident, []);
+    out.get(ident).push({
+      id: item.id,
+      ident,
+      entityType,
+      entity: item
+    });
+  };
+
+  for (const waypoint of waypoints ?? []) add("waypoint", waypoint);
+  for (const navaid of navaids ?? []) add("navaid", navaid);
+  return out;
+}
+
 /**
  * Build deterministic lookups for canonical model navigation entities.
  * @param {object} canonicalModel
@@ -66,6 +85,8 @@ export function buildLookups(canonicalModel) {
 
   const waypointsByIdent = indexByIdent(entities.waypoints, (w) => w.ident);
   const navaidsByIdent = indexByIdent(entities.navaids, (n) => n.ident);
+  const airportsByIdent = indexByIdent(entities.airports, (a) => a.ident);
+  const fixesByIdent = indexFixesByIdent(entities.waypoints, entities.navaids);
 
   return {
     entities,
@@ -83,7 +104,9 @@ export function buildLookups(canonicalModel) {
     proceduresByAirportId,
     proceduresByRunwayId,
     holdsByFixId,
+    airportsByIdent,
     waypointsByIdent,
-    navaidsByIdent
+    navaidsByIdent,
+    fixesByIdent
   };
 }

@@ -41,3 +41,18 @@ test("validateProcedureLegSequence warns on unsupported leg preservation", () =>
   assert.equal(result.valid, true);
   assert.match(result.warnings[0], /unsupported path terminator/i);
 });
+
+test("validateProcedureLegSequence warns when RF/AF metadata is incomplete", () => {
+  const result = validateProcedureLegSequence({
+    procedureId: "procedure:test:3",
+    warnings: [],
+    legs: [
+      { index: 0, seq: 1, pathTerminator: "IF", supported: true, fixId: "fix:1" },
+      { index: 1, seq: 2, pathTerminator: "RF", supported: true, fixId: "fix:2", centerFixId: null, radiusNm: null },
+      { index: 2, seq: 3, pathTerminator: "AF", supported: true, fixId: "fix:3", centerFixId: null, radiusNm: null }
+    ]
+  });
+  assert.equal(result.valid, true);
+  assert.ok(result.warnings.some((item) => /RF.*missing center fix/.test(item)));
+  assert.ok(result.warnings.some((item) => /AF.*missing radius/.test(item)));
+});

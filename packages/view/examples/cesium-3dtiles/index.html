@@ -70,29 +70,6 @@
       <div style="font-size:11px; opacity:0.8">Add <code>&debug=1</code> for index/tileset load traces.</div>
       <div style="font-size:11px; opacity:0.8">Basemap mode: <code>?basemap=muted</code> (default) or <code>?basemap=standard</code></div>
       <div style="font-size:11px; margin-top:8px; border-top:1px solid #d9e2d9; padding-top:6px">
-        <div><strong>Procedures</strong></div>
-        <label><input id="procShow" type="checkbox" /> show procedures</label><br />
-        <label for="procAirport">airport</label>
-        <select id="procAirport">
-          <option value="all">all</option>
-        </select>
-        <label for="procRunway">runway</label>
-        <select id="procRunway">
-          <option value="all">all</option>
-        </select><br />
-        <label for="procType">type</label>
-        <select id="procType">
-          <option value="all">all</option>
-          <option value="SID">SID</option>
-          <option value="STAR">STAR</option>
-          <option value="APPROACH">APPROACH</option>
-        </select>
-        <label for="procSelect">procedure</label>
-        <select id="procSelect">
-          <option value="all">all</option>
-        </select>
-      </div>
-      <div style="font-size:11px; margin-top:8px; border-top:1px solid #d9e2d9; padding-top:6px">
         <div><strong>Visual QA</strong></div>
         <label><input id="qaShowIssues" type="checkbox" checked /> show issues</label><br />
         <label for="qaSeverity">severity</label>
@@ -108,6 +85,9 @@
         <div id="qaStats" style="margin-top:4px; opacity:0.85"></div>
       </div>
       <div id="status"></div>
+      <div style="font-size:11px; margin-top:8px; opacity:0.8">
+        Cesium focuses on 3D airspaces and QA overlays. Use OpenLayers for 2D procedures and chart-style procedure inspection.
+      </div>
       <div id="issueInspector" style="display:none; font-size:11px; margin-top:8px; max-height:220px; overflow:auto; border-top:1px solid #d9e2d9; padding-top:6px"></div>
     </div>
     <div id="cesiumContainer"></div>
