@@ -1,4 +1,4 @@
-# Symbology Roadmap (OpenLayers)
+# Symbology Notes (OpenLayers)
 
 `examples/openlayers.html` includes ICAO/AIP-style symbology for points, routes, and airspace overlays, rendered with project-local canvas symbol generation.
 
@@ -30,7 +30,7 @@
 | `ET` preferred routes | Styled polyline + labels | route identifiers + linked points/geometry | Partial | Chart-specific route presentation conventions simplified |
 | `UC` / `UR` / `UF` airspaces | Polygon stroke/fill + category-aware boundary variants (double-stroke and dash by class/type) + labels | airspace class/type/category fields (`classification`, `restrictiveType`, etc.) | Partial | Full chart boundary/pattern catalog and all category-specific conventions are not fully mapped |
 
-## Priority Improvements
+## Open Items
 
 - Aerodrome symbol variants (civil/military/mixed/water/emergency) when source semantics are available.
 - Composite runway disposition display for procedure-chart contexts (using `PG` geometry instead of generic `PA` symbol).

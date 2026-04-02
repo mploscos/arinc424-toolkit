@@ -1,6 +1,6 @@
 {
   "name": "@arinc424/toolkit",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Convenience metapackage bundling core, features, procedures, analysis, tiles, 3D tiles, view APIs, and the arinc CLI.",
   "type": "module",
   "license": "MIT",
@@ -34,13 +34,13 @@
     "README.md"
   ],
   "dependencies": {
-    "@arinc424/3dtiles": "0.1.7",
-    "@arinc424/analysis": "0.1.7",
-    "@arinc424/core": "0.1.7",
-    "@arinc424/features": "0.1.7",
-    "@arinc424/procedures": "0.1.7",
-    "@arinc424/tiles": "0.1.7",
-    "@arinc424/view": "0.1.7"
+    "@arinc424/3dtiles": "0.1.8",
+    "@arinc424/analysis": "0.1.8",
+    "@arinc424/core": "0.1.8",
+    "@arinc424/features": "0.1.8",
+    "@arinc424/procedures": "0.1.8",
+    "@arinc424/tiles": "0.1.8",
+    "@arinc424/view": "0.1.8"
   },
   "publishConfig": {
     "access": "public"

@@ -8,12 +8,11 @@ import VectorTileSource from "https://esm.sh/ol@10.6.1/source/VectorTile.js";
 import VectorSource from "https://esm.sh/ol@10.6.1/source/Vector.js";
 import GeoJSON from "https://esm.sh/ol@10.6.1/format/GeoJSON.js";
 import { createXYZ } from "https://esm.sh/ol@10.6.1/tilegrid.js";
-import { Fill, Stroke, Style, Circle as CircleStyle, Text } from "https://esm.sh/ol@10.6.1/style.js";
+import { Fill, Stroke, Style, Circle as CircleStyle, RegularShape, Text } from "https://esm.sh/ol@10.6.1/style.js";
 import { transformExtent, fromLonLat } from "https://esm.sh/ol@10.6.1/proj.js";
 import Feature from "https://esm.sh/ol@10.6.1/Feature.js";
 import Polygon from "https://esm.sh/ol@10.6.1/geom/Polygon.js";
 import Point from "https://esm.sh/ol@10.6.1/geom/Point.js";
-import CircleGeom from "https://esm.sh/ol@10.6.1/geom/Circle.js";
 import {
   load2DTilesIndex,
   isVisualizationIndex
@@ -54,11 +53,10 @@ const labelsEnabled = params.get("labels") !== "0";
 const labelsMinZoom = Number(params.get("labelsMinZoom") ?? 7);
 const debugEnabled = params.get("debug") === "1";
 const basemapMode = params.get("basemap") || "muted";
+let activeRemoteIndexUrl = defaultIndexUrl.trim();
 
 const statusEl = document.getElementById("status");
-const indexUrlEl = document.getElementById("indexUrl");
 const loadBtn = document.getElementById("load");
-const pickIndexFileBtn = document.getElementById("pickIndexFile");
 const indexFileInput = document.getElementById("indexFileInput");
 const debugControlsEl = document.getElementById("debugControls");
 const airspaceInspectorEl = document.getElementById("airspaceInspector");
@@ -72,11 +70,6 @@ const dbgProcFocusEl = document.getElementById("dbgProcFocus");
 const dbgAirspaceColorsEl = document.getElementById("dbgAirspaceColors");
 const debugLegendEl = document.getElementById("debugLegend");
 const dbgSpatialFocusEl = document.getElementById("dbgSpatialFocus");
-const qaShowIssuesEl = document.getElementById("qaShowIssues");
-const qaSeverityEl = document.getElementById("qaSeverity");
-const qaTypeEl = document.getElementById("qaType");
-const qaStatsEl = document.getElementById("qaStats");
-const issueInspectorEl = document.getElementById("issueInspector");
 const procShowEl = document.getElementById("procShow");
 const procAirportEl = document.getElementById("procAirport");
 const procRunwayEl = document.getElementById("procRunway");
@@ -93,8 +86,6 @@ const chartModeEl = document.getElementById("chartMode");
 const chartModeStatusEl = document.getElementById("chartModeStatus");
 const chartFocusStatusEl = document.getElementById("chartFocusStatus");
 const zoomDebugStatusEl = document.getElementById("zoomDebugStatus");
-
-indexUrlEl.value = defaultIndexUrl || "/artifacts/<dataset>/visualization.index.json";
 const DEBUG_PREFIX = "[arinc-view:ol]";
 const debugLog = (...args) => { if (debugEnabled) console.log(DEBUG_PREFIX, ...args); };
 const debugWarn = (...args) => { if (debugEnabled) console.warn(DEBUG_PREFIX, ...args); };
@@ -180,22 +171,6 @@ const debugAirspacePalette = {
   "special-use": { fill: "rgba(133, 88, 53, 0.12)", stroke: "rgba(133, 88, 53, 0.98)" },
   unknown: { fill: "rgba(112, 118, 128, 0.12)", stroke: "rgba(112, 118, 128, 0.98)" }
 };
-const issueErrorStyle = new Style({
-  image: new CircleStyle({
-    radius: 4.6,
-    fill: new Fill({ color: "rgba(220, 30, 30, 0.92)" }),
-    stroke: new Stroke({ color: "#ffffff", width: 1.4 })
-  }),
-  zIndex: 990
-});
-const issueWarningStyle = new Style({
-  image: new CircleStyle({
-    radius: 4.2,
-    fill: new Fill({ color: "rgba(245, 147, 30, 0.92)" }),
-    stroke: new Stroke({ color: "#ffffff", width: 1.2 })
-  }),
-  zIndex: 989
-});
 
 const fallbackStyle = new Style({
   stroke: new Stroke({ color: "#234f3f", width: 1.3 }),
@@ -203,6 +178,7 @@ const fallbackStyle = new Style({
   zIndex: 1
 });
 const labelStyleCache = new Map();
+const pointLabelStyleCache = new Map();
 const chartStyleCache = new Map();
 const debugStyleCache = new Map();
 
@@ -236,10 +212,6 @@ let debugArcCenterLayer = null;
 let debugSegmentPointLayer = null;
 let debugArcCenterSource = null;
 let debugSegmentPointSource = null;
-let issueLayer = null;
-let issueSource = null;
-let issueHighlightLayer = null;
-let issueHighlightSource = null;
 let procedureDebugLayer = null;
 let procedureDebugSource = null;
 let procedureDebugFeatureCount = 0;
@@ -248,9 +220,6 @@ let spatialFocusSource = null;
 let activeTileMaxZoom = 15;
 let activeInspectMaxZoom = 18;
 let activeTileConfig = null;
-let issueFeaturesRaw = [];
-let issueFilterSeverity = "all";
-let issueFilterType = "all";
 const debugTileBoundaryFeatures = new Map();
 const debugTileCountFeatures = new Map();
 const debugTileCountStyleCache = new Map();
@@ -261,6 +230,123 @@ const debugStats = {
   emptyMissing: 0,
   failures: 0
 };
+
+function createPointSymbolImage(token) {
+  const fill = new Fill({ color: token.fill });
+  const stroke = new Stroke({ color: token.stroke, width: token.strokeWidth });
+  if (token.symbol === "airport") {
+    return new RegularShape({
+      points: 4,
+      radius: token.radius + 1.3,
+      angle: 0,
+      fill,
+      stroke
+    });
+  }
+  if (token.symbol === "heliport") {
+    return new RegularShape({
+      points: 4,
+      radius: token.radius + 1.2,
+      radius2: Math.max(2.1, token.radius * 0.52),
+      angle: Math.PI / 4,
+      fill,
+      stroke
+    });
+  }
+  if (token.symbol === "navaid") {
+    return new RegularShape({
+      points: 4,
+      radius: token.radius + 0.95,
+      angle: 0,
+      fill,
+      stroke
+    });
+  }
+  if (token.symbol === "waypoint" || token.symbol === "waypoint-compulsory") {
+    return new RegularShape({
+      points: token.symbol === "waypoint-compulsory" ? 4 : 3,
+      radius: token.radius + (token.symbol === "waypoint-compulsory" ? 0.95 : 1.15),
+      angle: 0,
+      fill,
+      stroke
+    });
+  }
+  return new CircleStyle({
+    radius: token.radius,
+    fill,
+    stroke
+  });
+}
+
+function getLabelStyleOptions(layer, priority) {
+  const key = String(layer || "").toLowerCase();
+  if (key === "airspaces" || key === "airspace") {
+    return {
+      font: priority >= 120 ? "600 12px 'Trebuchet MS', sans-serif" : "600 11px 'Trebuchet MS', sans-serif",
+      fill: "#304036",
+      stroke: "rgba(255,255,255,0.88)",
+      strokeWidth: 2.2,
+      overflow: false
+    };
+  }
+  if (key === "airways" || key === "airway") {
+    return {
+      font: "600 11px 'Consolas', 'Menlo', monospace",
+      fill: "#5d6772",
+      stroke: "rgba(255,255,255,0.9)",
+      strokeWidth: 2.6,
+      placement: "line",
+      overflow: true
+    };
+  }
+  if (key === "procedures" || key === "procedure" || key === "holds" || key === "hold") {
+    return {
+      font: "600 11px 'Trebuchet MS', sans-serif",
+      fill: "#4f2c2c",
+      stroke: "rgba(255,255,255,0.94)",
+      strokeWidth: 2.8,
+      placement: "line",
+      overflow: true
+    };
+  }
+  if (key === "airports" || key === "airport" || key === "heliports" || key === "heliport") {
+    return {
+      font: priority >= 110 ? "600 12px 'Trebuchet MS', sans-serif" : "600 11px 'Trebuchet MS', sans-serif",
+      fill: "#203045",
+      stroke: "rgba(255,255,255,0.95)",
+      strokeWidth: 2.8,
+      offsetY: -13,
+      overflow: true
+    };
+  }
+  if (key === "navaids" || key === "navaid") {
+    return {
+      font: "11px 'Tahoma', sans-serif",
+      fill: "#3b436c",
+      stroke: "rgba(255,255,255,0.95)",
+      strokeWidth: 2.4,
+      offsetY: -10,
+      overflow: true
+    };
+  }
+  if (key === "waypoints" || key === "waypoint") {
+    return {
+      font: "11px 'Tahoma', sans-serif",
+      fill: "#355248",
+      stroke: "rgba(255,255,255,0.95)",
+      strokeWidth: 2.2,
+      offsetY: -9,
+      overflow: true
+    };
+  }
+  return {
+    font: priority >= 95 ? "600 12px 'Trebuchet MS', sans-serif" : "11px 'Trebuchet MS', sans-serif",
+    fill: "#243129",
+    stroke: "rgba(255,255,255,0.92)",
+    strokeWidth: 2.6,
+    overflow: true
+  };
+}
 
 function layerStyle(feature, resolution) {
   return styleByLayer(feature, resolution);
@@ -313,6 +399,11 @@ function latToTileY(lat, z) {
   const n = 2 ** z;
   const latRad = (Math.max(-85.05112878, Math.min(85.05112878, lat)) * Math.PI) / 180;
   return Math.floor((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2 * n);
+}
+
+function shouldDeduplicateInspectionFeature(feature) {
+  const geomType = String(feature?.getGeometry?.()?.getType?.() || "");
+  return geomType === "Point" || geomType === "MultiPoint";
 }
 
 async function loadInspectionTileFeatures() {
@@ -375,9 +466,12 @@ async function loadInspectionTileFeatures() {
         featureProjection: "EPSG:3857"
       });
       for (const feature of tileFeatures) {
+        feature.set("inspectionFeature", true, true);
         const featureId = String(feature.getId?.() ?? feature.get("id") ?? `${x}/${y}/${features.length}`);
-        if (seenIds.has(featureId)) continue;
-        seenIds.add(featureId);
+        if (shouldDeduplicateInspectionFeature(feature)) {
+          if (seenIds.has(featureId)) continue;
+          seenIds.add(featureId);
+        }
         features.push(feature);
       }
     }
@@ -396,7 +490,7 @@ async function loadInspectionTileFeatures() {
 async function updateHighZoomInspectionMode() {
   const zoom = map.getView().getZoom();
   const useInspectionLayer = Number.isFinite(zoom) && zoom > activeTileMaxZoom;
-  if (tileLayer) tileLayer.setVisible(!useInspectionLayer);
+  if (tileLayer) tileLayer.setVisible(true);
   if (!useInspectionLayer) {
     if (inspectionVectorSource) inspectionVectorSource.clear();
     if (inspectionVectorLayer) inspectionVectorLayer.setVisible(false);
@@ -409,6 +503,11 @@ async function updateHighZoomInspectionMode() {
 function styleByLayer(feature, resolution) {
   const layer = String(feature.get("layer") || "").toLowerCase();
   const descriptor = activeLayerDescriptorMap.get(layer) || getDefaultLayerDescriptor(layer);
+  const isInspectionFeature = Boolean(feature.get("inspectionFeature"));
+
+  if (isInspectionFeature && descriptor?.styleHint === "airspace") {
+    return null;
+  }
 
   const zoom = map.getView().getZoomForResolution(resolution);
   const isProcedure = isProcedureLayerName(layer);
@@ -488,11 +587,7 @@ function styleByLayer(feature, resolution) {
       }));
     } else if (token.kind === "airport") {
       chartStyles = [new Style({
-        image: new CircleStyle({
-          radius: token.radius,
-          fill: new Fill({ color: token.fill }),
-          stroke: new Stroke({ color: token.stroke, width: token.strokeWidth })
-        }),
+        image: createPointSymbolImage(token),
         zIndex: 90
       })];
     } else if (token.kind === "runway") {
@@ -502,28 +597,43 @@ function styleByLayer(feature, resolution) {
       })];
     } else if (token.kind === "waypoint") {
       chartStyles = [new Style({
-        image: new CircleStyle({
-          radius: token.radius,
-          fill: new Fill({ color: token.fill }),
-          stroke: new Stroke({ color: token.stroke, width: token.strokeWidth })
-        }),
+        image: createPointSymbolImage(token),
         zIndex: 95
       })];
     } else if (token.kind === "procedure") {
       const hideUnselectedInProcedureMode = chartModeState.mode === "PROCEDURE" && procedureFocusContext.selected;
-      chartStyles = [new Style({
+      chartStyles = [];
+      if (token.casing && token.casingWidth > 0) {
+        chartStyles.push(new Style({
+          stroke: new Stroke({
+            color: procedureSelected
+              ? token.casing
+              : (hideUnselectedInProcedureMode ? lightenAlpha(token.casing, 0.28) : lightenAlpha(token.casing, 0.55)),
+            width: token.casingWidth,
+            lineDash: token.lineDash || undefined
+          }),
+          zIndex: 69
+        }));
+      }
+      chartStyles.push(new Style({
         stroke: new Stroke({
-          color: procedureSelected ? "rgba(255, 0, 255, 0.96)" : (hideUnselectedInProcedureMode ? "rgba(255, 0, 255, 0.08)" : "rgba(255, 0, 255, 0.34)"),
+          color: procedureSelected
+            ? token.stroke
+            : (hideUnselectedInProcedureMode ? lightenAlpha(token.stroke, 0.14) : lightenAlpha(token.stroke, 0.46)),
           width: procedureSelected ? token.width : Math.max(0.8, token.width - 0.55),
           lineDash: token.lineDash || undefined
         }),
         image: token.pointRadius > 0 ? new CircleStyle({
           radius: procedureSelected ? token.pointRadius : Math.max(2, token.pointRadius - 0.5),
-          fill: new Fill({ color: procedureSelected ? "rgba(255, 0, 255, 0.96)" : (hideUnselectedInProcedureMode ? "rgba(255, 0, 255, 0.1)" : "rgba(255, 0, 255, 0.34)") }),
+          fill: new Fill({
+            color: procedureSelected
+              ? (token.pointFill || token.stroke)
+              : (hideUnselectedInProcedureMode ? lightenAlpha(token.pointFill || token.stroke, 0.16) : lightenAlpha(token.pointFill || token.stroke, 0.48))
+          }),
           stroke: new Stroke({ color: "#ffffff", width: 1.1 })
         }) : undefined,
         zIndex: 70
-      })];
+      }));
     } else {
       chartStyles = [fallbackStyle];
     }
@@ -557,16 +667,47 @@ function appendLabelStyles(feature, descriptor, zoom, styles, suppress = false) 
   });
   if (!labelRule.enabled) return out;
   const label = labelRule.text;
+  const options = getLabelStyleOptions(layer, labelRule.priority);
+  const pointGeom = feature.getGeometry?.()?.getType?.();
+  const symbolStyleIndex = (pointGeom === "Point" || pointGeom === "MultiPoint")
+    ? out.findIndex((style) => style?.getImage?.())
+    : -1;
+  if (symbolStyleIndex >= 0) {
+    const symbolStyle = out[symbolStyleIndex];
+    const key = `${layer}|point|${label}|${labelRule.priority}|${symbolStyle.getZIndex?.() ?? 0}`;
+    let combinedStyle = pointLabelStyleCache.get(key);
+    if (!combinedStyle) {
+      combinedStyle = new Style({
+        image: symbolStyle.getImage(),
+        text: new Text({
+          text: label,
+          font: options.font,
+          fill: new Fill({ color: options.fill }),
+          stroke: new Stroke({ color: options.stroke, width: options.strokeWidth }),
+          placement: options.placement,
+          offsetY: options.offsetY ?? 0,
+          overflow: options.overflow
+        }),
+        zIndex: Math.max(symbolStyle.getZIndex?.() ?? 0, 120 + Math.min(labelRule.priority, 120))
+      });
+      pointLabelStyleCache.set(key, combinedStyle);
+    }
+    out[symbolStyleIndex] = combinedStyle;
+    return out;
+  }
+
   const key = `${layer}|${label}|${labelRule.priority}`;
   let labelStyle = labelStyleCache.get(key);
   if (!labelStyle) {
     labelStyle = new Style({
       text: new Text({
         text: label,
-        font: labelRule.priority >= 95 ? "600 12px 'Segoe UI', sans-serif" : "11px 'Segoe UI', sans-serif",
-        fill: new Fill({ color: "#243129" }),
-        stroke: new Stroke({ color: "rgba(255,255,255,0.92)", width: 2.6 }),
-        overflow: true
+        font: options.font,
+        fill: new Fill({ color: options.fill }),
+        stroke: new Stroke({ color: options.stroke, width: options.strokeWidth }),
+        placement: options.placement,
+        offsetY: options.offsetY ?? 0,
+        overflow: options.overflow
       }),
       zIndex: 120 + Math.min(labelRule.priority, 120)
     });
@@ -998,7 +1139,6 @@ function refreshProcedureRendering() {
   refreshSpatialFocusOverlay();
   if (tileLayer) tileLayer.changed();
   if (procedureDebugLayer) procedureDebugLayer.changed();
-  if (issueLayer) issueLayer.changed();
 }
 
 function updateProcedureLayerStatus() {
@@ -1049,6 +1189,14 @@ async function pickReachableIndexUrl(candidates) {
 }
 
 async function resolveRemoteIndexUrlFromSelectedJson(doc) {
+  const explicit = String(
+    doc?.servedVisualizationIndexUrl
+    || doc?.paths?.servedVisualizationIndexUrl
+    || doc?.servedPaths?.visualizationIndex
+    || ""
+  ).trim();
+  if (explicit) return explicit;
+
   const candidates = [];
   const dataset = String(doc?.dataset || "").trim();
   if (dataset) {
@@ -1063,63 +1211,6 @@ async function resolveRemoteIndexUrlFromSelectedJson(doc) {
   return pickReachableIndexUrl(candidates);
 }
 
-function issueStyle(feature) {
-  if (qaShowIssuesEl && !qaShowIssuesEl.checked) return null;
-  const severity = String(feature.get("severity") || "warning").toLowerCase();
-  const type = String(feature.get("type") || "").toLowerCase();
-  if (issueFilterSeverity !== "all" && severity !== issueFilterSeverity) return null;
-  if (issueFilterType !== "all" && type !== issueFilterType) return null;
-  if (chartModeState.mode === "PROCEDURE") {
-    return severity === "error"
-      ? new Style({
-          image: new CircleStyle({
-            radius: 3.7,
-            fill: new Fill({ color: "rgba(220, 30, 30, 0.52)" }),
-            stroke: new Stroke({ color: "#ffffff", width: 0.95 })
-          }),
-          zIndex: 985
-        })
-      : new Style({
-          image: new CircleStyle({
-            radius: 3.2,
-            fill: new Fill({ color: "rgba(245, 147, 30, 0.45)" }),
-            stroke: new Stroke({ color: "#ffffff", width: 0.85 })
-          }),
-          zIndex: 984
-        });
-  }
-  if (debugEnabled && debugUiState.procedureFocus) {
-    return severity === "error"
-      ? new Style({
-          image: new CircleStyle({
-            radius: 3.9,
-            fill: new Fill({ color: "rgba(220, 30, 30, 0.58)" }),
-            stroke: new Stroke({ color: "#ffffff", width: 1 })
-          }),
-          zIndex: 987
-        })
-      : new Style({
-          image: new CircleStyle({
-            radius: 3.4,
-            fill: new Fill({ color: "rgba(245, 147, 30, 0.52)" }),
-            stroke: new Stroke({ color: "#ffffff", width: 0.9 })
-          }),
-          zIndex: 986
-        });
-  }
-  return severity === "error" ? issueErrorStyle : issueWarningStyle;
-}
-
-function ensureIssueLayer() {
-  if (issueLayer) return;
-  issueSource = new VectorSource();
-  issueLayer = new VectorLayer({
-    source: issueSource,
-    style: issueStyle
-  });
-  map.addLayer(issueLayer);
-}
-
 function ensureProcedureDebugLayer() {
   if (procedureDebugLayer) return;
   procedureDebugSource = new VectorSource();
@@ -1131,102 +1222,6 @@ function ensureProcedureDebugLayer() {
   });
   procedureDebugLayer.setVisible(Boolean(debugEnabled && debugUiState.procedureLegColors));
   map.addLayer(procedureDebugLayer);
-}
-
-function ensureIssueHighlightLayer() {
-  if (issueHighlightLayer) return;
-  issueHighlightSource = new VectorSource();
-  issueHighlightLayer = new VectorLayer({
-    source: issueHighlightSource,
-    style: new Style({
-      stroke: new Stroke({ color: "rgba(255, 214, 0, 0.95)", width: 3, lineDash: [8, 4] }),
-      fill: new Fill({ color: "rgba(255, 214, 0, 0.09)" }),
-      image: new CircleStyle({
-        radius: 8,
-        fill: new Fill({ color: "rgba(255, 214, 0, 0.5)" }),
-        stroke: new Stroke({ color: "rgba(255,255,255,0.95)", width: 2 })
-      }),
-      zIndex: 995
-    })
-  });
-  map.addLayer(issueHighlightLayer);
-}
-
-function updateIssueStats() {
-  if (!qaStatsEl) return;
-  const total = issueFeaturesRaw.length;
-  const errors = issueFeaturesRaw.filter((f) => String(f.properties?.severity || "").toLowerCase() === "error").length;
-  const warnings = issueFeaturesRaw.filter((f) => String(f.properties?.severity || "").toLowerCase() === "warning").length;
-  qaStatsEl.textContent = `issues: ${total} | errors: ${errors} | warnings: ${warnings}`;
-}
-
-function refreshIssueTypeOptions() {
-  if (!qaTypeEl) return;
-  const types = [...new Set(issueFeaturesRaw.map((f) => String(f.properties?.type || "").toLowerCase()).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b));
-  const current = qaTypeEl.value || "all";
-  qaTypeEl.innerHTML = "";
-  const optAll = document.createElement("option");
-  optAll.value = "all";
-  optAll.textContent = "all";
-  qaTypeEl.appendChild(optAll);
-  for (const t of types) {
-    const opt = document.createElement("option");
-    opt.value = t;
-    opt.textContent = t;
-    qaTypeEl.appendChild(opt);
-  }
-  qaTypeEl.value = types.includes(current) || current === "all" ? current : "all";
-}
-
-function renderIssueInspector(feature) {
-  if (!issueInspectorEl) return;
-  if (!feature) {
-    issueInspectorEl.style.display = "none";
-    issueInspectorEl.innerHTML = "";
-    return;
-  }
-  issueInspectorEl.style.display = "block";
-  issueInspectorEl.innerHTML = `
-    <div><strong>Issue</strong></div>
-    <div><strong>severity:</strong> ${String(feature.get("severity") || "n/a")}</div>
-    <div><strong>type:</strong> ${String(feature.get("type") || "n/a")}</div>
-    <div><strong>entity:</strong> ${String(feature.get("relatedEntityId") || "n/a")}</div>
-    <div><strong>message:</strong> ${String(feature.get("message") || "n/a")}</div>
-  `;
-}
-
-function highlightRelatedEntity(issueFeature) {
-  ensureIssueHighlightLayer();
-  issueHighlightSource.clear();
-  if (!issueFeature) return;
-
-  const bbox = issueFeature.get("bbox");
-  const highlight = new Feature();
-  if (Array.isArray(bbox) && bbox.length === 4 && bbox.every(Number.isFinite)) {
-    const [minLon, minLat, maxLon, maxLat] = bbox;
-    const ring = [[minLon, minLat], [maxLon, minLat], [maxLon, maxLat], [minLon, maxLat], [minLon, minLat]];
-    const geom = new Polygon([ring]).transform("EPSG:4326", "EPSG:3857");
-    highlight.setGeometry(geom);
-    issueHighlightSource.addFeature(highlight);
-    map.getView().fit(geom.getExtent(), { duration: 350, padding: [36, 36, 36, 36], maxZoom: 11 });
-    return;
-  }
-
-  const geom = issueFeature.getGeometry();
-  if (geom instanceof Point) {
-    const center = geom.getCoordinates();
-    const circle = new CircleGeom(center, 9000);
-    highlight.setGeometry(circle);
-    issueHighlightSource.addFeature(highlight);
-    map.getView().fit(circle.getExtent(), { duration: 300, padding: [36, 36, 36, 36], maxZoom: 10 });
-  }
-}
-
-function applyIssueFilters() {
-  issueFilterSeverity = qaSeverityEl?.value || "all";
-  issueFilterType = qaTypeEl?.value || "all";
-  if (issueLayer) issueLayer.changed();
 }
 
 function renderInspectorFeature(feature) {
@@ -1515,6 +1510,52 @@ function findLocalFile(uri) {
   return localTileFiles.get(clean) || localTileFiles.get(clean.replace(/^\.\/+/, "")) || localTileFiles.get(clean.split("/").pop());
 }
 
+function createLocalFileEntry(pathKey, source) {
+  const relativePath = String(pathKey || source?.webkitRelativePath || source?.name || "")
+    .replaceAll("\\\\", "/")
+    .replace(/^\/+/, "");
+  const name = relativePath.split("/").pop() || String(source?.name || "");
+  return {
+    name,
+    webkitRelativePath: relativePath,
+    async getFile() {
+      if (source && typeof source.getFile === "function") return source.getFile();
+      return source;
+    },
+    async text() {
+      const file = await this.getFile();
+      return file.text();
+    }
+  };
+}
+
+async function ingestDirectoryHandle(dirHandle, relativeBase = "") {
+  for await (const [entryName, handle] of dirHandle.entries()) {
+    const nextPath = relativeBase ? `${relativeBase}/${entryName}` : entryName;
+    if (handle.kind === "directory") {
+      await ingestDirectoryHandle(handle, nextPath);
+      continue;
+    }
+    const entry = createLocalFileEntry(nextPath, handle);
+    const clean = entry.webkitRelativePath.replace(/^\.\/+/, "");
+    localTileFiles.set(clean, entry);
+    localTileFiles.set(entry.name, entry);
+    if (entry.name === "visualization.index.json" && !localIndexFile) localIndexFile = entry;
+  }
+}
+
+async function pickLocalTileDirectory() {
+  if (typeof window.showDirectoryPicker === "function") {
+    const dirHandle = await window.showDirectoryPicker({ mode: "read" });
+    localTileFiles = new Map();
+    localIndexFile = null;
+    await ingestDirectoryHandle(dirHandle);
+    return;
+  }
+  indexFileInput.value = "";
+  indexFileInput.click();
+}
+
 async function load2DTilesIndexFromLocalSelection() {
   const visIndexFile = localIndexFile || findLocalFile("visualization.index.json");
   if (visIndexFile) {
@@ -1543,86 +1584,18 @@ async function load2DTilesIndexFromLocalSelection() {
   };
 }
 
-function issueFeatureCollectionToOl(geojson) {
-  const rawFeatures = Array.isArray(geojson?.features) ? geojson.features : [];
-  let renderableCount = 0;
-  let renderedErrors = 0;
-  let renderedWarnings = 0;
-
-  const normalized = {
-    type: "FeatureCollection",
-    features: rawFeatures.map((feature) => {
-      const featureBbox = Array.isArray(feature?.bbox) ? feature.bbox : null;
-      const propertyBbox = Array.isArray(feature?.properties?.bbox) ? feature.properties.bbox : null;
-      let geometry = feature?.geometry ?? null;
-
-      const isRenderablePoint = geometry?.type === "Point"
-        && Array.isArray(geometry.coordinates)
-        && geometry.coordinates.length >= 2
-        && geometry.coordinates.every(Number.isFinite);
-
-      if (!isRenderablePoint) {
-        const bbox = (featureBbox && featureBbox.length === 4 && featureBbox.every(Number.isFinite))
-          ? featureBbox
-          : ((propertyBbox && propertyBbox.length === 4 && propertyBbox.every(Number.isFinite)) ? propertyBbox : null);
-        if (bbox) {
-          const [minLon, minLat, maxLon, maxLat] = bbox;
-          geometry = {
-            type: "Point",
-            coordinates: [(minLon + maxLon) / 2, (minLat + maxLat) / 2]
-          };
-        } else {
-          geometry = null;
-        }
-      }
-
-      const severity = String(feature?.properties?.severity || "").toLowerCase();
-      if (geometry?.type === "Point") {
-        renderableCount += 1;
-        if (severity === "error") renderedErrors += 1;
-        if (severity === "warning") renderedWarnings += 1;
-      }
-
-      return {
-        ...feature,
-        geometry
-      };
-    })
-  };
-
-  const format = new GeoJSON({ dataProjection: "EPSG:4326", featureProjection: "EPSG:3857" });
-  const features = format.readFeatures(normalized, {
-    dataProjection: "EPSG:4326",
-    featureProjection: "EPSG:3857"
-  });
-  debugLog("qa issues normalized", {
-    totalIssuesLoaded: rawFeatures.length,
-    issuesWithRenderableGeometry: renderableCount,
-    errorsRendered: renderedErrors,
-    warningsRendered: renderedWarnings
-  });
-  return features;
-}
-
-async function tryLoadIssueGeoJsonRemote(baseIndexUrl, visualizationIndex = null) {
-  const candidates = [];
-  if (visualizationIndex?.outputs?.qa?.issues) {
-    candidates.push(new URL(visualizationIndex.outputs.qa.issues, baseIndexUrl).toString());
+function setLocalTileSelection(files = []) {
+  localTileFiles = new Map();
+  localIndexFile = null;
+  for (const file of files) {
+    if (!file) continue;
+    const entry = createLocalFileEntry(file.webkitRelativePath || file.name || "", file);
+    const clean = entry.webkitRelativePath.replace(/^\.\/+/, "");
+    if (!clean) continue;
+    localTileFiles.set(clean, entry);
+    localTileFiles.set(entry.name, entry);
+    if (entry.name === "visualization.index.json" && !localIndexFile) localIndexFile = entry;
   }
-  candidates.push(new URL("./analysis/issues.geojson", baseIndexUrl).toString());
-
-  for (const url of candidates) {
-    try {
-      const r = await fetch(url);
-      if (r.status === 404) continue;
-      if (!r.ok) continue;
-      const json = await r.json();
-      if (json?.type === "FeatureCollection") return { url, json };
-    } catch {
-      // keep trying
-    }
-  }
-  return null;
 }
 
 async function tryLoadProcedureCatalogRemote(loaded, indexUrl) {
@@ -1780,66 +1753,6 @@ async function loadProcedureDebugLegsLocal(visualizationIndex = null) {
   refreshProcedureControls();
   updateProcedureLayerStatus();
   debugLog("procedure debug legs loaded from local files", { name: loadedLegs.name, count: features.length });
-}
-
-async function tryLoadIssueGeoJsonLocal(visualizationIndex = null) {
-  const refs = [];
-  if (visualizationIndex?.outputs?.qa?.issues) refs.push(visualizationIndex.outputs.qa.issues);
-  refs.push("./analysis/issues.geojson", "analysis/issues.geojson", "issues.geojson");
-
-  for (const ref of refs) {
-    const normalized = String(ref).replace(/^\.\/+/, "");
-    const file = findLocalFile(normalized);
-    if (!file) continue;
-    try {
-      const json = JSON.parse(await file.text());
-      if (json?.type === "FeatureCollection") return { name: file.name, json };
-    } catch {
-      // continue
-    }
-  }
-  return null;
-}
-
-async function loadIssueLayerRemote(loaded, indexUrl) {
-  ensureIssueLayer();
-  const base = loaded.visualizationIndexUrl || loaded.tilesIndexUrl || indexUrl;
-  const issueLoaded = await tryLoadIssueGeoJsonRemote(base, loaded.visualizationIndex);
-  if (!issueLoaded) {
-    issueFeaturesRaw = [];
-    issueSource.clear();
-    refreshIssueTypeOptions();
-    updateIssueStats();
-    debugLog("qa issues not found for remote dataset");
-    return;
-  }
-  issueFeaturesRaw = issueLoaded.json.features ?? [];
-  issueSource.clear();
-  issueSource.addFeatures(issueFeatureCollectionToOl(issueLoaded.json));
-  refreshIssueTypeOptions();
-  updateIssueStats();
-  applyIssueFilters();
-  debugLog("qa issues loaded", { url: issueLoaded.url, issueCount: issueFeaturesRaw.length });
-}
-
-async function loadIssueLayerLocal(visualizationIndex = null) {
-  ensureIssueLayer();
-  const issueLoaded = await tryLoadIssueGeoJsonLocal(visualizationIndex);
-  if (!issueLoaded) {
-    issueFeaturesRaw = [];
-    issueSource.clear();
-    refreshIssueTypeOptions();
-    updateIssueStats();
-    debugLog("qa issues not found in local selection");
-    return;
-  }
-  issueFeaturesRaw = issueLoaded.json.features ?? [];
-  issueSource.clear();
-  issueSource.addFeatures(issueFeatureCollectionToOl(issueLoaded.json));
-  refreshIssueTypeOptions();
-  updateIssueStats();
-  applyIssueFilters();
-  debugLog("qa issues loaded from local files", { name: issueLoaded.name, issueCount: issueFeaturesRaw.length });
 }
 
 function createTileLayer(config) {
@@ -2134,7 +2047,6 @@ async function loadFromRemoteIndex(indexUrl) {
   debugSummary("remote index loaded");
   await loadProcedureCatalogRemote(loaded, indexUrl);
   await loadProcedureDebugLegsRemote(loaded, indexUrl);
-  await loadIssueLayerRemote(loaded, indexUrl);
   await updateHighZoomInspectionMode();
   setStatus(`Loaded 2D tiles index (${loaded.source}): ${tilesIndexUrl}`);
 }
@@ -2220,7 +2132,6 @@ async function loadFromLocalSelection() {
   debugSummary("local index loaded");
   await loadProcedureCatalogLocal();
   await loadProcedureDebugLegsLocal(loaded.visualizationIndex);
-  await loadIssueLayerLocal(loaded.visualizationIndex);
   await updateHighZoomInspectionMode();
   setStatus(`Loaded local 2D index with ${localTileFiles.size} files.`);
 }
@@ -2231,27 +2142,22 @@ async function loadTiles() {
       await loadFromLocalSelection();
       return;
     }
-    const indexUrl = indexUrlEl.value.trim();
-    if (!indexUrl) {
-      setStatus("Missing index URL (visualization.index.json or tiles/index.json)");
+    if (!activeRemoteIndexUrl) {
+      setStatus("Select visualization.index.json.");
       return;
     }
-    await loadFromRemoteIndex(indexUrl);
+    await loadFromRemoteIndex(activeRemoteIndexUrl);
   } catch (err) {
     const msg = String(err?.message || err);
     if (msg.includes("Cannot find local 2D index file referenced by visualization index")) {
-      setStatus("Index file selected without dataset folder context. Select the dataset folder that contains visualization.index.json.");
+      setStatus("Selected folder is missing files referenced from visualization.index.json.");
       return;
     }
     setStatus(`Failed to load index: ${msg}`);
   }
 }
 
-loadBtn.addEventListener("click", () => {
-  void loadTiles();
-});
-
-pickIndexFileBtn.addEventListener("click", () => {
+loadBtn.addEventListener("click", async () => {
   indexFileInput.value = "";
   indexFileInput.click();
 });
@@ -2259,15 +2165,17 @@ pickIndexFileBtn.addEventListener("click", () => {
 indexFileInput.addEventListener("change", async (ev) => {
   const file = ev.target.files?.[0];
   if (!file) return;
+  localTileFiles = new Map();
+  localIndexFile = null;
   try {
     const parsed = JSON.parse(await file.text());
     const resolved = await resolveRemoteIndexUrlFromSelectedJson(parsed);
     if (!resolved) {
-      setStatus("Cannot resolve served dataset URL from selected file. Use index URL manually (e.g. /artifacts/<dataset>/visualization.index.json).");
+      setStatus("Cannot resolve the served dataset URL from this visualization.index.json. Regenerate the dataset with a servedVisualizationIndexUrl hint or open it with ?index=/data/<folder>/visualization.index.json.");
       return;
     }
-    indexUrlEl.value = resolved;
-    setStatus(`Resolved index URL: ${resolved}`);
+    activeRemoteIndexUrl = resolved;
+    setStatus(`Resolved dataset URL: ${resolved}`);
   } catch (err) {
     setStatus(`Invalid index file: ${err?.message || err}`);
     return;
@@ -2275,16 +2183,12 @@ indexFileInput.addEventListener("change", async (ev) => {
   void loadTiles();
 });
 
-qaShowIssuesEl?.addEventListener("change", () => {
-  if (issueLayer) issueLayer.changed();
-});
 chartModeEl?.addEventListener("change", () => {
   chartModeState.mode = normalizeChartMode(chartModeEl.value);
   rebuildChartSpatialContext();
   updateChartModeStatus();
   refreshSpatialFocusOverlay();
   updateZoomDebugStatus();
-  if (issueLayer) issueLayer.changed();
   if (tileLayer) tileLayer.changed();
   if (procedureDebugLayer) procedureDebugLayer.changed();
 });
@@ -2315,26 +2219,6 @@ procLegTypeEl?.addEventListener("change", () => {
 procSelectedOnlyEl?.addEventListener("change", () => {
   refreshProcedureRendering();
 });
-qaSeverityEl?.addEventListener("change", () => {
-  applyIssueFilters();
-});
-qaTypeEl?.addEventListener("change", () => {
-  applyIssueFilters();
-});
-
-map.on("singleclick", (evt) => {
-  let issueFeature = null;
-  map.forEachFeatureAtPixel(evt.pixel, (feature) => {
-    if (feature.get("severity")) {
-      issueFeature = feature;
-      return true;
-    }
-    return false;
-  });
-  renderIssueInspector(issueFeature);
-  highlightRelatedEntity(issueFeature);
-});
-
 map.on("moveend", () => {
   updateZoomDebugStatus();
   void updateHighZoomInspectionMode();
@@ -2401,5 +2285,5 @@ if (debugEnabled) {
 if (params.get("index")) {
   void loadTiles();
 } else {
-  setStatus("Select visualization.index.json or paste index URL, then click Load.");
+  setStatus("Click Load and select visualization.index.json.");
 }

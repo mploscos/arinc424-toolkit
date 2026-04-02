@@ -4,44 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-### Added
-- Phase 3B analysis extensions in `@arinc424/analysis`:
-  - relation builders (`buildRelations`, airport/runway/airway/procedure/airspace helpers)
-  - cross-entity consistency validation (`validateCrossEntityConsistency`)
-  - relational query helper (`queryRelated`)
-  - procedure inspector (`inspectProcedure`)
-- Phase 4A visual QA foundation:
-  - analysis issue feature builder (`buildIssueFeatures`)
-  - dataset runner QA outputs (`analysis/consistency.json`, `analysis/issues.geojson`)
-  - viewer QA controls/layers for OpenLayers and Cesium (toggle/filter/stats/inspector)
-  - new viewer QA documentation (`docs/view-debug.md`)
-- Phase 4B chart-like cartography:
-  - centralized cartography style system (`packages/view/src/cartography/style-system.js`)
-  - zoom-dependent visual hierarchy and label prioritization rules
-  - OpenLayers issue click -> related area highlight + recenter
-  - Cesium issue click -> selection highlight + bbox/point zoom
-- New CLI commands:
-  - `arinc inspect-procedure`
-  - `arinc procedure-geometry`
-  - `arinc related`
-  - `arinc validate-relations`
-- New package: `@arinc424/procedures`
-  - incremental Attachment 5 leg decoding and geometry helpers
-  - supported path terminators: `IF`, `TF`, `CF`, `DF`, `RF`, `AF`
-  - unsupported path terminators preserved explicitly in metadata/warnings
+## 0.1.8 - 2026-04-03
+
+Viewer polish and release-surface cleanup.
+
+This release simplifies example loading, removes obsolete viewer-side QA overlays, improves high-zoom OpenLayers behavior, and refreshes the repository presentation for easier adoption.
 
 ### Changed
-- Airport/waypoint/airspace inspectors now include richer relation metadata.
-- Analysis docs and README updated for relation/coherence workflows.
-- README/viewer docs updated for index-driven QA issue rendering.
-- Cartography docs updated with chart-like hierarchy/zoom strategy details.
-- Phase 4C cartography readability refinements:
-  - lighter airspace fills and stronger boundary-led definition
-  - waypoint symbol/label density reduced at low-medium zoom
-  - label priority tuned to favor airspaces over airports, then airways, then waypoints
-  - subtler airway casing
-  - smaller persistent QA issue markers in 2D/3D viewers
-  - muted basemap mode for OpenLayers/Cesium so ARINC overlays read more clearly
+- Workspace package versions aligned to `0.1.8`.
+- Root README reorganized for faster onboarding:
+  - visual header with example screenshots
+  - shorter install / quick-start / viewer sections
+  - current release summary moved earlier
+- Procedure package README wording refreshed for the current incremental release line.
+- Viewer debug docs rewritten to match the current examples and remove stale QA overlay guidance.
+- OpenLayers cartography metadata now keeps tile availability zooms separate from cartographic visibility zooms.
+
+### Fixed
+- `arinc --help` no longer references archived monolithic runtime paths.
+- OpenLayers and Cesium examples now load datasets via normal `visualization.index.json` selection instead of manual path entry.
+- OpenLayers high-zoom inspection no longer disappears immediately above tile max zoom due to seeded `maxZoom` metadata.
+- OpenLayers high-zoom handling now avoids broken airspace rendering caused by reusing clipped inspection fragments as the primary airspace display.
+- Point layers in OpenLayers now render symbol and label together more reliably at higher zoom levels.
+
+### Removed
+- Viewer-side visual QA overlays and related controls from OpenLayers and Cesium examples.
+- Stale viewer QA references from root docs.
 
 ## 0.1.7 - 2026-03-17
 
@@ -84,14 +72,14 @@ Improves Jeppesen compatibility without weakening validation, corrects `RF` radi
 
 ## 0.1.6 - 2026-03-14
 
-Attachment 5 Phase 2.
+Procedure arc-leg support.
 
 Adds `RF` and `AF` arc-leg support to the procedure geometry engine.
 Extends the incremental Attachment 5 surface without changing existing behavior for `IF`, `TF`, `CF`, and `DF`.
 Arc geometry is validated and rendered through the existing viewer pipeline.
 
 ### Added
-- Attachment 5 Phase 2 release surface:
+- Procedure arc-leg release surface:
   - `RF` support (constant-radius arc between fixes)
   - `AF` support (arc-to-fix / DME-style arc)
   - reusable arc interpolation utilities in `@arinc424/procedures`
@@ -104,29 +92,29 @@ Arc geometry is validated and rendered through the existing viewer pipeline.
 
 ## 0.1.5 - 2026-03-14
 
-Attachment 5 Phase 1.
+Initial procedure geometry support.
 
 Introduces initial ARINC 424 Path & Terminator support with `IF`, `TF`, `CF`, and `DF` legs.
 Adds a lightweight procedure geometry engine and integrates procedures into the viewer.
 This release establishes the foundation for incremental Attachment 5 support.
 
 ### Added
-- Phase 3B analysis release surface:
+- Analysis relation tooling:
   - relation builders and lookup helpers
   - cross-entity consistency validation
   - `inspect-procedure`
   - relational CLI commands (`related`, `validate-relations`)
-- Phase 4A visual QA layer:
+- Visual QA overlay:
   - `analysis/issues.geojson`
   - QA controls and issue inspection in OpenLayers/Cesium
-- Phase 4B/4C viewer refinements:
+- Viewer refinements:
   - chart-like cartography rules
   - zoom-aware label hierarchy and declutter
   - muted basemap mode
-- Attachment 5 Phase 1 release surface:
+- Initial procedure release surface:
   - `@arinc424/procedures`
   - minimal CLI entrypoint `arinc procedure-geometry`
-  - phase 1 support for `IF`, `TF`, `CF`, `DF`
+  - support for `IF`, `TF`, `CF`, `DF`
   - unsupported leg types preserved explicitly rather than silently approximated
 
 ### Changed
@@ -138,7 +126,7 @@ This release establishes the foundation for incremental Attachment 5 support.
 ## 0.1.4 - 2026-03-14
 
 ### Added
-- Phase 3A analysis layer publicly released:
+- Analysis layer publicly released:
   - `@arinc424/analysis` package
   - CLI analysis commands (`stats`, `inspect-airspace`, `inspect-airport`, `inspect-waypoint`, `query`)
   - analysis docs (`docs/analysis.md`, package README)
@@ -153,7 +141,7 @@ This release establishes the foundation for incremental Attachment 5 support.
 ### Added
 - OpenLayers debug inspector modules for airspace inspection and geometry overlays.
 - Cartography preparation modules for viewer-side layer/style/label descriptors.
-- New workspace package: `@arinc424/analysis` (Phase 3A).
+- New workspace package: `@arinc424/analysis`.
   - dataset summaries for canonical and feature models
   - entity inspectors (`airspace`, `airport`, `waypoint`)
   - query/filter helpers (`layer`, `type`, `id`, `bbox`, property match)

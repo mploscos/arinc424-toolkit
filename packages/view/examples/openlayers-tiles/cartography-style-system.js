@@ -31,6 +31,10 @@ function classifyLayer(styleHint) {
   return "default";
 }
 
+function layerHintOfFeature(feature) {
+  return String(feature.get("layerHint") ?? feature.get("layer") ?? "").toLowerCase();
+}
+
 const AIRSPACE_STYLE_PALETTE = Object.freeze({
   controlledMajor: { stroke: "rgba(58, 101, 168, 0.96)", fill: "rgba(58, 101, 168, 0.055)" },
   controlledMinor: { stroke: "rgba(96, 128, 176, 0.9)", fill: "rgba(96, 128, 176, 0.032)" },
@@ -251,10 +255,13 @@ export function getChartStyleToken(feature, descriptor, zoom) {
 
   if (layerClass === "airport") {
     const major = importance === "major";
+    const facilityType = normalizeTextForMatching(firstText(feature, ["facilityType", "airportType", "type"]));
+    const isHeliport = descriptor?.styleHint === "heliport" || layerHintOfFeature(feature).startsWith("heliport") || facilityType.includes("HEL") || facilityType === "HP";
     return {
       kind: "airport",
+      symbol: isHeliport ? "heliport" : "airport",
       radius: zoom >= 10 ? (major ? 6.4 : 5.4) : (major ? 5.8 : 4.8),
-      fill: descriptor?.styleHint === "heliport" ? "#805300" : (major ? "#173a68" : "#39618e"),
+      fill: isHeliport ? (major ? "#6e5a1f" : "#8e7330") : (major ? "#173a68" : "#39618e"),
       stroke: "#ffffff",
       strokeWidth: major ? 1.4 : 1.1
     };
@@ -265,10 +272,14 @@ export function getChartStyleToken(feature, descriptor, zoom) {
   }
 
   if (layerClass === "waypoint") {
+    const isNavaid = descriptor?.styleHint === "navaid" || layerHintOfFeature(feature) === "navaids" || layerHintOfFeature(feature) === "navaid";
+    const usage = normalizeTextForMatching(feature.get("usage"));
+    const compulsory = usage === "B";
     return {
       kind: "waypoint",
+      symbol: isNavaid ? "navaid" : (compulsory ? "waypoint-compulsory" : "waypoint"),
       radius: zoom >= 13 ? (importance === "major" ? 3.1 : 2.5) : (importance === "major" ? 2.6 : 2.1),
-      fill: descriptor?.styleHint === "navaid" ? "#5c6491" : "#597b6e",
+      fill: isNavaid ? "#4f5c90" : (compulsory ? "#436f8b" : "#597b6e"),
       stroke: "#ffffff",
       strokeWidth: 0.9
     };
@@ -276,14 +287,25 @@ export function getChartStyleToken(feature, descriptor, zoom) {
 
   if (layerClass === "procedure") {
     const procedureKind = procedureKindFromFeature(feature);
+    const isHold = descriptor?.styleHint === "hold" || layerHintOfFeature(feature) === "hold" || layerHintOfFeature(feature) === "holds";
     const legType = String(feature.get("legType") ?? "").toUpperCase();
+    const palette = isHold
+      ? { stroke: "rgba(88, 112, 48, 0.96)", casing: "rgba(255, 255, 255, 0.72)", lineDash: [6, 5] }
+      : procedureKind === "approach"
+        ? { stroke: "rgba(176, 52, 52, 0.96)", casing: "rgba(255, 255, 255, 0.78)", lineDash: [10, 4, 2, 4] }
+        : procedureKind === "star"
+          ? { stroke: "rgba(43, 118, 157, 0.94)", casing: "rgba(255, 255, 255, 0.75)", lineDash: [10, 6] }
+          : { stroke: "rgba(150, 97, 45, 0.96)", casing: "rgba(255, 255, 255, 0.74)", lineDash: null };
     return {
       kind: "procedure",
-      stroke: descriptor?.styleHint === "hold" ? "#7d4d2a" : "rgba(255, 0, 255, 0.9)",
-      width: descriptor?.styleHint === "hold"
-        ? (zoom >= 14 ? 1.7 : 1.4)
-        : (zoom >= 14 ? (procedureKind === "approach" ? 2.4 : 2) : (procedureKind === "approach" ? 2.1 : 1.7)),
-      lineDash: descriptor?.styleHint === "hold" ? [3, 4] : null,
+      stroke: palette.stroke,
+      casing: palette.casing,
+      casingWidth: zoom >= 14 ? (isHold ? 2.2 : 2.8) : (isHold ? 1.9 : 2.35),
+      width: zoom >= 14
+        ? (isHold ? 1.7 : (procedureKind === "approach" ? 2.4 : 2))
+        : (isHold ? 1.45 : (procedureKind === "approach" ? 2.1 : 1.7)),
+      lineDash: palette.lineDash,
+      pointFill: palette.stroke,
       pointRadius: legType === "IF" ? (zoom >= 13 ? 3.4 : 2.8) : 0
     };
   }

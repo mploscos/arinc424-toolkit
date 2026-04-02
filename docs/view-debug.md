@@ -1,21 +1,10 @@
-# Visual QA Tools
+# Viewer Debug Notes
 
-Phase 4A adds a lightweight visual QA layer on top of the analysis consistency checks.
+The example viewers no longer render analysis issue overlays. Visual QA stays in `@arinc424/analysis`; the viewers focus on tiled data, procedures, and geometry/debug inspection.
 
-## Purpose
+## Recommended workflow
 
-Render analysis issues directly in the viewers so dataset problems are visible on map/scene:
-
-- cross-entity inconsistencies
-- unresolved references
-- ambiguous identifiers
-- relation warnings
-
-The analysis layer remains the source of truth (`@arinc424/analysis`).
-
-## Data flow
-
-1. Generate artifacts with dataset runner:
+1. Generate a dataset:
 
 ```bash
 npm run dataset:run -- \
@@ -24,71 +13,43 @@ npm run dataset:run -- \
   --dataset FAACIFP18
 ```
 
-2. Runner writes:
+2. Open a viewer and load `visualization.index.json`.
 
-- `analysis/consistency.json`
-- `analysis/issues.geojson`
-- `analysis/procedure-legs.geojson` only if `--with-procedure-legs` is explicitly enabled
-- `visualization.index.json` with `outputs.qa`
+3. Use query params when needed:
 
-`procedure-legs.geojson` is a debug artifact for Path Terminator inspection. For large datasets it should usually be generated selectively with filters such as `--procedure-legs-airport`, `--procedure-legs-type`, and `--procedure-legs-limit`.
+- `?index=/data/<folder>/visualization.index.json`
+- `&debug=1`
+- `&basemap=muted` or `&basemap=standard`
 
-3. Viewers load `visualization.index.json` and then resolve QA assets from `outputs.qa`.
-   If procedure-leg debug output was generated, the same index also exposes `outputs.debug.procedureLegs`.
-   If that debug entry is absent, OpenLayers keeps the normal aggregated procedure layer and does not try to fake per-leg debug styling.
+## OpenLayers
 
-Recommended viewer workflow:
+`openlayers-tiles` is the primary 2D inspection surface.
 
-- Prefer direct URL loading from `/artifacts/<dataset>/visualization.index.json`
-- Or use **Select visualization.index.json** so the viewer resolves the served artifact URL automatically
-- If automatic resolution fails, paste the `/artifacts/<dataset>/visualization.index.json` URL manually
+With `&debug=1` enabled it exposes:
 
-Viewer roles:
+- airspace click inspector
+- tile boundary overlay
+- per-tile feature counts
+- arc center and segment point overlays
+- procedure-leg debug styling when `analysis/procedure-legs.geojson` is present
+- request/load counters in the status panel
 
-- OpenLayers: 2D chart-style viewer for procedures, tiled GeoJSON inspection, and debug overlays
-- Cesium: 3D airspace / volume viewer with lightweight QA issue visualization
+If the procedure-leg debug artifact is absent, OpenLayers keeps the normal aggregated procedure layer and skips the per-leg overlay.
 
-## OpenLayers QA Layer
+## Cesium
 
-In `openlayers-tiles`:
+`cesium-3dtiles` stays focused on 3D airspaces and volumes.
 
-- Toggle: `show issues`
-- Filters: `severity`, `type`
-- Stats: total/errors/warnings
-- Click issue marker to open issue panel
-- Click issue marker also highlights related entity area (bbox-based) and recenters when needed
+With `&debug=1` enabled it exposes:
 
-Severity styling:
+- index load traces
+- tileset load traces
+- bounds/zoom diagnostics in the console
 
-- `error`: red marker
-- `warning`: orange marker
-
-## Cesium QA Layer
-
-In `cesium-3dtiles`:
-
-- Toggle: `show issues`
-- Filters: `severity`, `type`
-- Stats: total/errors/warnings
-- Click issue point to open issue panel
-- Click issue point highlights selected issue and zooms to related bbox/point
-
-Severity styling:
-
-- `error`: red point
-- `warning`: orange point
-
-Cesium intentionally does not render the dense generic procedure polyline overlay anymore.
-That responsibility stays in OpenLayers, where 2D chart-style filtering and procedure inspection are more useful and cheaper to render.
-
-Future direction:
-
-- selected procedures may later be represented in Cesium as higher-value 3D forms such as ribbons/corridors
-- dense generic procedure polylines are intentionally avoided in the 3D viewer
+Cesium intentionally does not render dense 2D procedure overlays. That work stays in OpenLayers, where chart-style inspection is more useful.
 
 ## Notes
 
-- QA rendering is non-blocking. Core 2D/3D dataset rendering continues even if QA files are missing.
-- Missing QA files are treated as "no issue layer available" (not fatal).
-- OpenLayers tile `404` remains treated as empty tile to support sparse pyramids.
-- Related-entity highlight is currently bbox/point oriented. It does not yet perform deep semantic matching against all rendered entities.
+- OpenLayers tile `404` is still treated as an empty tile so sparse pyramids remain usable.
+- Missing optional debug artifacts are non-fatal.
+- Analysis outputs can still be generated for offline validation even though the viewers no longer render issue markers.

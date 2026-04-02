@@ -8,6 +8,8 @@ import {
   isFeatureVisibleAtZoom,
   getLabelRule,
   getProcedureStyle,
+  getAirportStyle,
+  getWaypointStyle,
   getAirspaceStyle,
   getAirwayStyle,
   categorizeAirspaceFeatureProperties,
@@ -77,8 +79,30 @@ test("buildCartography can seed from index-like metadata", () => {
   assert.equal(cartography.layers.length, 3);
   const airports = cartography.layers.find((l) => l.name === "airports");
   assert.equal(airports.minZoom, 4);
-  assert.equal(airports.maxZoom, 10);
+  assert.equal(airports.maxZoom, 22);
+  assert.equal(airports.availableMinZoom, 4);
+  assert.equal(airports.availableMaxZoom, 10);
   assert.deepEqual(cartography.bounds, [-10, 35, 5, 45]);
+});
+
+test("seeded tile max zoom does not hide cartography above the tile pyramid", () => {
+  const cartography = buildCartography(
+    { features: [] },
+    {
+      layers: ["airports"],
+      minZoom: 4,
+      maxZoom: 10
+    }
+  );
+  const airportDescriptor = cartography.layers.find((l) => l.name === "airports");
+  const airport = {
+    properties: { ident: "LEMD", importance: "major" },
+    minZoom: undefined,
+    maxZoom: undefined
+  };
+
+  assert.equal(isFeatureVisibleAtZoom(airport, airportDescriptor, 11), true);
+  assert.equal(isFeatureVisibleAtZoom(airport, airportDescriptor, 16), true);
 });
 
 test("label candidates are sorted by priority", () => {
@@ -156,6 +180,36 @@ test("visibility and label rules follow chart-like zoom thresholds", () => {
   assert.ok(getProcedureStyle(approachProcedure, 14).width > getProcedureStyle({ properties: { procedureType: "SID" } }, 14).width);
 });
 
+test("point layers stay visible at zooms where their labels appear", () => {
+  const cases = [
+    {
+      descriptor: getDefaultLayerDescriptor("airports"),
+      feature: { properties: { ident: "LEMD", importance: "major" }, minZoom: undefined, maxZoom: undefined },
+      labelZoom: 7
+    },
+    {
+      descriptor: getDefaultLayerDescriptor("heliports"),
+      feature: { properties: { ident: "LEHC", importance: "minor" }, minZoom: undefined, maxZoom: undefined },
+      labelZoom: 11
+    },
+    {
+      descriptor: getDefaultLayerDescriptor("navaids"),
+      feature: { properties: { ident: "NDB1", layer: "navaids", importance: "medium" }, minZoom: undefined, maxZoom: undefined },
+      labelZoom: 13
+    },
+    {
+      descriptor: getDefaultLayerDescriptor("waypoints"),
+      feature: { properties: { ident: "FIX01", layer: "waypoints", importance: "minor" }, minZoom: undefined, maxZoom: undefined },
+      labelZoom: 13
+    }
+  ];
+
+  for (const entry of cases) {
+    assert.equal(getLabelRule(entry.feature, entry.descriptor, entry.labelZoom).enabled, true);
+    assert.equal(isFeatureVisibleAtZoom(entry.feature, entry.descriptor, entry.labelZoom), true);
+  }
+});
+
 test("deriveProcedureDisplay avoids exposing raw internal ids as labels", () => {
   const display = deriveProcedureDisplay({
     properties: {
@@ -210,6 +264,36 @@ test("airways and labels are visually secondary at overview scales", () => {
   assert.ok(airwayMinorStyle.width < airwayMajorStyle.width);
   assert.equal(getLabelRule(minorAirway, airwayDescriptor, 10).enabled, false);
   assert.equal(getLabelRule(majorAirway, airwayDescriptor, 10).enabled, true);
+});
+
+test("point symbology tokens distinguish airports, heliports, navaids, and compulsory fixes", () => {
+  const airport = { properties: { facilityType: "AIRPORT", importance: "major" } };
+  const heliport = { properties: { facilityType: "HELIPORT", importance: "major" } };
+  const navaid = { properties: { layer: "navaids", importance: "medium" } };
+  const compulsoryFix = { properties: { layer: "waypoints", usage: "B", importance: "minor" } };
+
+  assert.equal(getAirportStyle(airport, 10).symbol, "airport");
+  assert.equal(getAirportStyle(heliport, 10).symbol, "heliport");
+  assert.equal(getWaypointStyle(navaid, 12).symbol, "navaid");
+  assert.equal(getWaypointStyle(compulsoryFix, 12).symbol, "waypoint-compulsory");
+});
+
+test("procedure styles vary by editorial category instead of one generic magenta", () => {
+  const sid = { properties: { procedureType: "SID" } };
+  const star = { properties: { procedureType: "STAR" } };
+  const approach = { properties: { procedureType: "APPROACH" } };
+  const hold = { layer: "holds", properties: { layer: "holds" } };
+
+  const sidStyle = getProcedureStyle(sid, 13);
+  const starStyle = getProcedureStyle(star, 13);
+  const approachStyle = getProcedureStyle(approach, 13);
+  const holdStyle = getProcedureStyle(hold, 13);
+
+  assert.notEqual(sidStyle.stroke, starStyle.stroke);
+  assert.notEqual(starStyle.stroke, approachStyle.stroke);
+  assert.deepEqual(starStyle.lineDash, [10, 6]);
+  assert.deepEqual(approachStyle.lineDash, [10, 4, 2, 4]);
+  assert.deepEqual(holdStyle.lineDash, [6, 5]);
 });
 
 test("chart modes suppress clutter according to editorial intent", () => {

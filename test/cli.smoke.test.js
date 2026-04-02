@@ -6,10 +6,27 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 function run(scriptPath, args, cwd) {
-  return spawnSync(process.execPath, [scriptPath, ...args], {
-    cwd,
-    encoding: "utf8"
-  });
+  const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), "arinc-cli-capture-"));
+  const stdoutFile = path.join(captureDir, "stdout.txt");
+  const stderrFile = path.join(captureDir, "stderr.txt");
+  const stdoutFd = fs.openSync(stdoutFile, "w");
+  const stderrFd = fs.openSync(stderrFile, "w");
+  try {
+    const result = spawnSync(process.execPath, [scriptPath, ...args], {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", stdoutFd, stderrFd]
+    });
+    return {
+      ...result,
+      stdout: fs.readFileSync(stdoutFile, "utf8"),
+      stderr: fs.readFileSync(stderrFile, "utf8")
+    };
+  } finally {
+    fs.closeSync(stdoutFd);
+    fs.closeSync(stderrFd);
+    fs.rmSync(captureDir, { recursive: true, force: true });
+  }
 }
 
 function runRootCli(args, cwd) {
@@ -59,6 +76,15 @@ test("cli smoke: invalid command usage returns non-zero", () => {
   const cwd = process.cwd();
   const r = runRootCli(["parse"], cwd);
   assert.notEqual(r.status, 0);
+});
+
+test("cli smoke: help does not mention removed legacy monolith paths", () => {
+  const cwd = process.cwd();
+  const r = runRootCli(["--help"], cwd);
+  assert.notEqual(r.status, 0);
+  assert.match(r.stdout, /The CLI is orchestration-only; domain logic lives in the published workspace packages\./);
+  assert.doesNotMatch(r.stdout, /legacy\/src-monolith/i);
+  assert.doesNotMatch(r.stdout, /Legacy monolithic runtime code/i);
 });
 
 test("cli smoke: analysis commands", () => {

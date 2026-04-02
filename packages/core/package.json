@@ -1,6 +1,6 @@
 {
   "name": "@arinc424/core",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "ARINC 424 parsing, canonical model generation, and canonical schema validation.",
   "type": "module",
   "license": "MIT",

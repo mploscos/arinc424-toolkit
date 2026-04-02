@@ -1,6 +1,6 @@
 {
   "name": "@arinc424/features",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Canonical ARINC navigation model to normalized geospatial feature model.",
   "type": "module",
   "license": "MIT",
@@ -29,7 +29,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@arinc424/core": "0.1.7"
+    "@arinc424/core": "0.1.8"
   },
   "publishConfig": {
     "access": "public"

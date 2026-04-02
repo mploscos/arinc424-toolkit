@@ -8,17 +8,15 @@ This project keeps three distinct levels:
 
 The cartography layer is intentionally lightweight and viewer-oriented. It does not modify canonical or feature contracts.
 
-## Phase 4C: Readability refinements
+## Readability goals
 
 The goal is chart-like readability (not pixel-perfect FAA reproduction):
 
 - clear visual hierarchy
 - progressive detail by zoom
 - label prioritization + declutter
-- QA/debug overlays above operational symbology
 - lower visual dominance from background airspaces
 - stricter waypoint density control
-- more restrained issue marker weight
 
 Priority order used by viewers:
 
@@ -27,7 +25,7 @@ Priority order used by viewers:
 3. airports/runways
 4. waypoints/navaids
 5. procedures/holds
-6. debug + QA issues
+6. debug overlays
 
 ## Why this separation exists
 
@@ -99,7 +97,7 @@ Viewer responsibility split:
 - Cesium: 3D airspace/volume viewer
 
 Procedure rendering is intentionally kept in OpenLayers.
-Cesium should prioritize volumetric context, selected overlays, and QA rather than dense generic procedure polylines.
+Cesium should prioritize volumetric context and selected overlays rather than dense generic procedure polylines.
 
 Chart-like zoom behavior (approximate):
 
@@ -110,13 +108,12 @@ Chart-like zoom behavior (approximate):
 
 The exact threshold may vary by feature `importance`/classification when present.
 
-Phase 4C refinements:
+Current refinements:
 
 - airspace fills are lighter; borders carry more of the shape definition
 - smaller airspaces appear later than major ones
 - waypoint symbols appear before waypoint labels
 - waypoint labels are delayed to reduce clutter
-- issue markers remain visible but smaller than airport symbols
 - basemap can be muted so ARINC overlays read more clearly over OSM
 
 The viewer can build descriptors:

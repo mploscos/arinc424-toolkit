@@ -2,7 +2,7 @@
 
 `@arinc424/procedures` introduces an incremental implementation of ARINC 424 Attachment 5.
 
-## Current scope (`0.1.7`)
+## Current support
 
 Supported path terminators:
 
@@ -56,11 +56,3 @@ Unsupported path terminators are:
 - `RF`: constant-radius arc between fixes, built from center + radius metadata
 - `AF`: arc-to-fix geometry using resolved center + radius metadata
 - chained legs are checked for geometry continuity and reported with warnings if gaps are detected
-
-## Roadmap direction
-
-- `0.1.5`: Attachment 5 Phase 1 (`IF`, `TF`, `CF`, `DF`)
-- `0.1.6`: `RF` / `AF` arc legs
-- `0.1.7`: parser hardening for FAA CIFP / Jeppesen compatibility
-- `0.1.8+`: additional leg types and richer procedure composition/debug output
-- `0.2.0`: substantially completed Attachment 5 geometry engine

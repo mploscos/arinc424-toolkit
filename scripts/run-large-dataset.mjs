@@ -214,6 +214,23 @@ function writeJson(filePath, value) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
+function deriveServedVisualizationIndexUrl(outDir) {
+  const repoRoot = process.cwd();
+  const normalizedOut = path.resolve(outDir);
+  const dataRoot = path.resolve(repoRoot, "data");
+  const artifactsRoot = path.resolve(repoRoot, "artifacts");
+
+  if (normalizedOut.startsWith(`${dataRoot}${path.sep}`) || normalizedOut === dataRoot) {
+    const rel = path.relative(dataRoot, normalizedOut).replaceAll("\\", "/");
+    return `/data/${rel ? `${rel}/` : ""}visualization.index.json`;
+  }
+  if (normalizedOut.startsWith(`${artifactsRoot}${path.sep}`) || normalizedOut === artifactsRoot) {
+    const rel = path.relative(artifactsRoot, normalizedOut).replaceAll("\\", "/");
+    return `/artifacts/${rel ? `${rel}/` : ""}visualization.index.json`;
+  }
+  return null;
+}
+
 function formatBytes(n) {
   if (!Number.isFinite(n)) return "0 B";
   const units = ["B", "KB", "MB", "GB"];
@@ -639,6 +656,7 @@ async function main() {
   const visualizationIndex = {
     dataset: args.dataset,
     version: "1.0",
+    servedVisualizationIndexUrl: deriveServedVisualizationIndexUrl(args.out),
     outputs
   };
   const visualizationIndexPath = path.join(args.out, "visualization.index.json");

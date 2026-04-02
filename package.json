@@ -1,6 +1,6 @@
 {
   "name": "arinc424-toolkit",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "private": true,
   "description": "Modular Node.js platform for ARINC 424 canonical parsing, features, tiling and 3D tiles.",
   "type": "module",
@@ -28,7 +28,12 @@
     "aviation",
     "geojson",
     "3dtiles",
-    "tiling"
+    "tiling",
+    "js",
+    "npm",
+    "javascript",
+    "openlayers",
+    "cesium"
   ],
   "repository": {
     "type": "git",

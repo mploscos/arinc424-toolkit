@@ -114,6 +114,11 @@ function classifyLayer(layerHint) {
   return "default";
 }
 
+function layerHintOfFeature(featureOrProps) {
+  const props = featureOrProps?.properties ?? featureOrProps ?? {};
+  return String(props.layerHint ?? props.layer ?? featureOrProps?.layer ?? "").toLowerCase();
+}
+
 export const AIRSPACE_STYLE_PALETTE = Object.freeze({
   controlledMajor: { stroke: "rgba(58, 101, 168, 0.96)", fill: "rgba(58, 101, 168, 0.055)" },
   controlledMinor: { stroke: "rgba(96, 128, 176, 0.9)", fill: "rgba(96, 128, 176, 0.032)" },
@@ -267,9 +272,12 @@ export function getAirwayStyle(feature, zoom) {
 
 export function getAirportStyle(feature, zoom) {
   const major = parseImportance(feature) === "major";
+  const facilityType = normalizeTextForMatching(firstText(feature?.properties ?? feature ?? {}, ["facilityType", "airportType", "type"]));
+  const isHeliport = layerHintOfFeature(feature).startsWith("heliport") || facilityType.includes("HEL") || facilityType === "HP";
   return {
+    symbol: isHeliport ? "heliport" : "airport",
     radius: zoom >= 10 ? (major ? 6.4 : 5.4) : (major ? 5.8 : 4.8),
-    fill: major ? "#173a68" : "#39618e",
+    fill: isHeliport ? (major ? "#6e5a1f" : "#8e7330") : (major ? "#173a68" : "#39618e"),
     stroke: "#ffffff",
     strokeWidth: major ? 1.4 : 1.1
   };
@@ -280,9 +288,12 @@ export function getWaypointStyle(feature, zoom) {
   const props = feature?.properties ?? {};
   const layerName = String(props.layerHint ?? props.layer ?? feature?.layer ?? "").toLowerCase();
   const isNavaid = layerName === "navaid" || layerName === "navaids";
+  const usage = normalizeTextForMatching(props.usage);
+  const compulsory = usage === "B";
   return {
+    symbol: isNavaid ? "navaid" : (compulsory ? "waypoint-compulsory" : "waypoint"),
     radius: zoom >= 13 ? (major ? 3.1 : 2.5) : (major ? 2.6 : 2.1),
-    fill: isNavaid ? "#5c6491" : "#597b6e",
+    fill: isNavaid ? "#4f5c90" : (compulsory ? "#436f8b" : "#597b6e"),
     stroke: "#ffffff",
     strokeWidth: 0.9
   };
@@ -297,12 +308,24 @@ export function getRunwayStyle(_feature, zoom) {
 
 export function getProcedureStyle(_feature, zoom) {
   const kind = procedureKind(_feature);
+  const layerHint = layerHintOfFeature(_feature);
   const isApproach = kind === "approach";
+  const isHold = layerHint === "hold" || layerHint === "holds";
   const legType = String(_feature?.properties?.legType ?? "").toUpperCase();
+  const palette = isHold
+    ? { stroke: "rgba(88, 112, 48, 0.96)", casing: "rgba(255, 255, 255, 0.72)", lineDash: [6, 5] }
+    : kind === "approach"
+      ? { stroke: "rgba(176, 52, 52, 0.96)", casing: "rgba(255, 255, 255, 0.78)", lineDash: [10, 4, 2, 4] }
+      : kind === "star"
+        ? { stroke: "rgba(43, 118, 157, 0.94)", casing: "rgba(255, 255, 255, 0.75)", lineDash: [10, 6] }
+        : { stroke: "rgba(150, 97, 45, 0.96)", casing: "rgba(255, 255, 255, 0.74)", lineDash: null };
   return {
-    stroke: "rgba(255, 0, 255, 0.9)",
-    width: zoom >= 14 ? (isApproach ? 2.4 : 2) : (isApproach ? 2.1 : 1.7),
-    lineDash: null,
+    stroke: palette.stroke,
+    casing: palette.casing,
+    casingWidth: zoom >= 14 ? (isHold ? 2.2 : 2.8) : (isHold ? 1.9 : 2.35),
+    width: zoom >= 14 ? (isHold ? 1.7 : (isApproach ? 2.4 : 2)) : (isHold ? 1.45 : (isApproach ? 2.1 : 1.7)),
+    lineDash: palette.lineDash,
+    pointFill: palette.stroke,
     pointRadius: legType === "IF" ? (zoom >= 13 ? 3.4 : 2.8) : 0
   };
 }

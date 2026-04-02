@@ -79,15 +79,11 @@
     <div class="panel">
       <div><strong>OpenLayers 2D tiled GeoJSON inspector</strong></div>
       <div class="row">
-        <label for="indexUrl">Index</label>
-        <input id="indexUrl" type="text" />
         <button id="load" type="button">Load</button>
       </div>
-      <div class="row">
-        <button id="pickIndexFile" type="button">Select visualization.index.json</button>
-      </div>
       <div id="status"></div>
-      <div style="font-size:11px; margin-top:6px; opacity:0.8">Use URL or select <code>visualization.index.json</code></div>
+      <div style="font-size:11px; margin-top:6px; opacity:0.8">Select <code>visualization.index.json</code></div>
+      <div style="font-size:11px; margin-top:4px; opacity:0.8">Advanced: a served dataset can still be auto-opened with <code>?index=/data/&lt;folder&gt;/visualization.index.json</code></div>
       <div style="font-size:11px; margin-top:4px; opacity:0.8">
         Add <code>&debug=1</code> to inspect tile bounds/counts and load stats.
       </div>
@@ -148,21 +144,6 @@
           Procedure debug layer is vector-based and can be inspected beyond tile max zoom.
         </div>
       </div>
-      <div style="font-size:11px; margin-top:8px; border-top:1px solid #d9e2d9; padding-top:6px">
-        <div><strong>Visual QA</strong></div>
-        <label><input id="qaShowIssues" type="checkbox" checked /> show issues</label><br />
-        <label for="qaSeverity">severity</label>
-        <select id="qaSeverity">
-          <option value="all">all</option>
-          <option value="error">error</option>
-          <option value="warning">warning</option>
-        </select>
-        <label for="qaType">type</label>
-        <select id="qaType">
-          <option value="all">all</option>
-        </select>
-        <div id="qaStats" style="margin-top:4px; opacity:0.85"></div>
-      </div>
       <div id="debugControls" style="display:none; font-size:11px; margin-top:8px; border-top:1px solid #d9e2d9; padding-top:6px">
         <div><strong>Debug controls</strong></div>
         <label><input id="dbgInspector" type="checkbox" checked /> airspace inspector</label><br />
@@ -177,7 +158,6 @@
         <div id="debugLegend" style="display:none; margin-top:6px; opacity:0.9"></div>
       </div>
       <div id="airspaceInspector" style="display:none; font-size:11px; margin-top:8px; max-height:220px; overflow:auto; border-top:1px solid #d9e2d9; padding-top:6px"></div>
-      <div id="issueInspector" style="display:none; font-size:11px; margin-top:8px; max-height:220px; overflow:auto; border-top:1px solid #d9e2d9; padding-top:6px"></div>
     </div>
     <div id="map"></div>
     <input id="indexFileInput" type="file" accept=".json,application/json" hidden />

@@ -60,8 +60,10 @@ export function buildCartography(featureModel, seed = {}) {
       ...descriptor,
       bounds: null,
       featureCount: 0,
-      minZoom: Number.isFinite(seed.minZoom) ? seed.minZoom : descriptor.minZoom,
-      maxZoom: Number.isFinite(seed.maxZoom) ? seed.maxZoom : descriptor.maxZoom
+      minZoom: descriptor.minZoom,
+      maxZoom: descriptor.maxZoom,
+      availableMinZoom: Number.isFinite(seed.minZoom) ? seed.minZoom : null,
+      availableMaxZoom: Number.isFinite(seed.maxZoom) ? seed.maxZoom : null
     });
   }
 
@@ -110,6 +112,8 @@ export function buildCartography(featureModel, seed = {}) {
       featureCount: layer.featureCount,
       minZoom: Number.isFinite(layer.minZoom) ? layer.minZoom : 4,
       maxZoom: Number.isFinite(layer.maxZoom) ? layer.maxZoom : 14,
+      availableMinZoom: Number.isFinite(layer.availableMinZoom) ? layer.availableMinZoom : null,
+      availableMaxZoom: Number.isFinite(layer.availableMaxZoom) ? layer.availableMaxZoom : null,
       styleHint: layer.styleHint,
       label: layer.label,
       simplifyHint: {

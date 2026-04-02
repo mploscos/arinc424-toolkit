@@ -7,19 +7,11 @@ const params = new URLSearchParams(window.location.search);
 const defaultIndexUrl = params.get("index") || "";
 const debugEnabled = params.get("debug") === "1";
 const basemapMode = params.get("basemap") || "muted";
+let activeRemoteIndexUrl = defaultIndexUrl.trim();
 
-const indexInput = document.getElementById("indexUrl");
 const loadBtn = document.getElementById("load");
 const statusEl = document.getElementById("status");
-const pickIndexFileBtn = document.getElementById("pickIndexFile");
 const indexFileInput = document.getElementById("indexFileInput");
-const qaShowIssuesEl = document.getElementById("qaShowIssues");
-const qaSeverityEl = document.getElementById("qaSeverity");
-const qaTypeEl = document.getElementById("qaType");
-const qaStatsEl = document.getElementById("qaStats");
-const issueInspectorEl = document.getElementById("issueInspector");
-
-indexInput.value = defaultIndexUrl || "/artifacts/<dataset>/visualization.index.json";
 
 const viewer = new Cesium.Viewer("cesiumContainer", {
   timeline: false,
@@ -61,10 +53,6 @@ let local3dFiles = new Map();
 let localIndexFile = null;
 let localBlobUrls = [];
 let rewrittenJsonByPath = new Map();
-let issueDataSource = null;
-let issueEntities = [];
-let issueFeaturesRaw = [];
-let selectedIssueEntity = null;
 const DEBUG_PREFIX = "[arinc-view:cesium]";
 const debugLog = (...args) => { if (debugEnabled) console.log(DEBUG_PREFIX, ...args); };
 const debugWarn = (...args) => { if (debugEnabled) console.warn(DEBUG_PREFIX, ...args); };
@@ -98,6 +86,14 @@ async function pickReachableIndexUrl(candidates) {
 }
 
 async function resolveRemoteIndexUrlFromSelectedJson(doc) {
+  const explicit = String(
+    doc?.servedVisualizationIndexUrl
+    || doc?.paths?.servedVisualizationIndexUrl
+    || doc?.servedPaths?.visualizationIndex
+    || ""
+  ).trim();
+  if (explicit) return explicit;
+
   const candidates = [];
   const dataset = String(doc?.dataset || "").trim();
   if (dataset) {
@@ -112,325 +108,9 @@ async function resolveRemoteIndexUrlFromSelectedJson(doc) {
   return pickReachableIndexUrl(candidates);
 }
 
-function renderIssueInspector(featureLike) {
-  if (!issueInspectorEl) return;
-  if (!featureLike) {
-    issueInspectorEl.style.display = "none";
-    issueInspectorEl.innerHTML = "";
-    return;
-  }
-  const severity = String(featureLike.severity || "n/a");
-  const type = String(featureLike.type || "n/a");
-  const entity = String(featureLike.relatedEntityId || "n/a");
-  const message = String(featureLike.message || "n/a");
-  issueInspectorEl.style.display = "block";
-  issueInspectorEl.innerHTML = `
-    <div><strong>Issue</strong></div>
-    <div><strong>severity:</strong> ${severity}</div>
-    <div><strong>type:</strong> ${type}</div>
-    <div><strong>entity:</strong> ${entity}</div>
-    <div><strong>message:</strong> ${message}</div>
-  `;
-}
-
-function updateIssueStats() {
-  if (!qaStatsEl) return;
-  const total = issueFeaturesRaw.length;
-  const errors = issueFeaturesRaw.filter((f) => String(f.properties?.severity || "").toLowerCase() === "error").length;
-  const warnings = issueFeaturesRaw.filter((f) => String(f.properties?.severity || "").toLowerCase() === "warning").length;
-  qaStatsEl.textContent = `issues: ${total} | errors: ${errors} | warnings: ${warnings}`;
-}
-
-function refreshIssueTypeOptions() {
-  if (!qaTypeEl) return;
-  const types = [...new Set(issueFeaturesRaw.map((f) => String(f.properties?.type || "").toLowerCase()).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b));
-  const current = qaTypeEl.value || "all";
-  qaTypeEl.innerHTML = "";
-  const optAll = document.createElement("option");
-  optAll.value = "all";
-  optAll.textContent = "all";
-  qaTypeEl.appendChild(optAll);
-  for (const t of types) {
-    const opt = document.createElement("option");
-    opt.value = t;
-    opt.textContent = t;
-    qaTypeEl.appendChild(opt);
-  }
-  qaTypeEl.value = types.includes(current) || current === "all" ? current : "all";
-}
-
-function entityIssueProps(entity) {
-  const p = entity?.properties;
-  if (!p) return null;
-  const severity = p.severity?.getValue?.() ?? p.severity;
-  const type = p.type?.getValue?.() ?? p.type;
-  const message = p.message?.getValue?.() ?? p.message;
-  const relatedEntityId = p.relatedEntityId?.getValue?.() ?? p.relatedEntityId;
-  if (!severity && !type && !message) return null;
-  return {
-    severity: String(severity ?? "warning").toLowerCase(),
-    type: String(type ?? "").toLowerCase(),
-    message: String(message ?? ""),
-    relatedEntityId: relatedEntityId ? String(relatedEntityId) : null,
-    bbox: p.bbox?.getValue?.() ?? p.bbox ?? null
-  };
-}
-
-function parseBbox(value) {
-  if (Array.isArray(value) && value.length === 4 && value.every(Number.isFinite)) return value;
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed) && parsed.length === 4 && parsed.every(Number.isFinite)) return parsed;
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
-
-function centerOfBbox(bbox) {
-  const parsed = parseBbox(bbox);
-  if (!parsed) return null;
-  const [minLon, minLat, maxLon, maxLat] = parsed;
-  return [(minLon + maxLon) / 2, (minLat + maxLat) / 2];
-}
-
-function deriveIssuePointGeometry(feature) {
-  const geometry = feature?.geometry ?? null;
-  if (geometry?.type === "Point" && Array.isArray(geometry.coordinates) && geometry.coordinates.length >= 2) {
-    const [lon, lat] = geometry.coordinates;
-    if (Number.isFinite(lon) && Number.isFinite(lat)) return geometry;
-  }
-
-  const featureBbox = parseBbox(feature?.bbox);
-  const propertyBbox = parseBbox(feature?.properties?.bbox);
-  const center = centerOfBbox(featureBbox ?? propertyBbox);
-  if (!center) return null;
-  return {
-    type: "Point",
-    coordinates: center
-  };
-}
-
-function normalizeIssueGeoJsonForCesium(geojson) {
-  const rawFeatures = Array.isArray(geojson?.features) ? geojson.features : [];
-  let renderableCount = 0;
-  let renderedErrors = 0;
-  let renderedWarnings = 0;
-
-  const normalizedFeatures = rawFeatures.map((feature) => {
-    const derivedGeometry = deriveIssuePointGeometry(feature);
-    const severity = String(feature?.properties?.severity || "").toLowerCase();
-    if (derivedGeometry) {
-      renderableCount += 1;
-      if (severity === "error") renderedErrors += 1;
-      if (severity === "warning") renderedWarnings += 1;
-    }
-    return {
-      ...feature,
-      geometry: derivedGeometry
-    };
-  });
-
-  return {
-    normalized: {
-      type: "FeatureCollection",
-      features: normalizedFeatures
-    },
-    debug: {
-      totalIssuesLoaded: rawFeatures.length,
-      issuesWithRenderableGeometry: renderableCount,
-      errorsRendered: renderedErrors,
-      warningsRendered: renderedWarnings
-    }
-  };
-}
-
-function applyIssueFilters() {
-  const show = qaShowIssuesEl ? Boolean(qaShowIssuesEl.checked) : true;
-  const severityFilter = qaSeverityEl?.value || "all";
-  const typeFilter = qaTypeEl?.value || "all";
-  for (const entity of issueEntities) {
-    const props = entityIssueProps(entity);
-    if (!props) {
-      entity.show = false;
-      continue;
-    }
-    const severityOk = severityFilter === "all" || props.severity === severityFilter;
-    const typeOk = typeFilter === "all" || props.type === typeFilter;
-    entity.show = show && severityOk && typeOk;
-  }
-}
-
-async function clearIssueDataSource() {
-  if (issueDataSource) {
-    await viewer.dataSources.remove(issueDataSource, true);
-    issueDataSource = null;
-  }
-  issueEntities = [];
-  issueFeaturesRaw = [];
-  selectedIssueEntity = null;
-  updateIssueStats();
-  refreshIssueTypeOptions();
-  renderIssueInspector(null);
-}
-
 // TODO (future Cesium procedure work):
 // Represent only selected high-value procedures as 3D-friendly ribbons/corridors or similar forms.
 // Avoid reintroducing dense generic ground-clamped procedure polyline overlays here.
-
-function styleIssueEntities() {
-  for (const entity of issueEntities) {
-    const props = entityIssueProps(entity);
-    if (!props) continue;
-    const isError = props.severity === "error";
-    entity.billboard = undefined;
-    entity.point = new Cesium.PointGraphics({
-      pixelSize: isError ? 7.6 : 6.1,
-      color: isError
-        ? Cesium.Color.fromCssColorString("#d11d1d").withAlpha(0.95)
-        : Cesium.Color.fromCssColorString("#f0a11f").withAlpha(0.88),
-      outlineColor: Cesium.Color.WHITE,
-      outlineWidth: isError ? 1.5 : 1.1,
-      disableDepthTestDistance: Number.POSITIVE_INFINITY
-    });
-  }
-}
-
-function highlightSelectedIssueEntity(entity) {
-  if (selectedIssueEntity?.point) {
-    const prev = entityIssueProps(selectedIssueEntity);
-    const prevError = prev?.severity === "error";
-    selectedIssueEntity.point.pixelSize = prevError ? 12 : 9;
-    selectedIssueEntity.point.outlineColor = Cesium.Color.WHITE;
-    selectedIssueEntity.point.outlineWidth = prevError ? 2 : 1.5;
-  }
-  selectedIssueEntity = entity ?? null;
-  if (selectedIssueEntity?.point) {
-    selectedIssueEntity.point.pixelSize = 11;
-    selectedIssueEntity.point.outlineColor = Cesium.Color.fromCssColorString("#ffea61");
-    selectedIssueEntity.point.outlineWidth = 2.4;
-  }
-}
-
-async function zoomToIssueEntity(entity) {
-  const props = entityIssueProps(entity);
-  if (!props) return;
-  const bbox = parseBbox(props.bbox);
-  if (bbox) {
-    const [minLon, minLat, maxLon, maxLat] = bbox;
-    await viewer.camera.flyTo({
-      destination: Cesium.Rectangle.fromDegrees(minLon, minLat, maxLon, maxLat),
-      duration: 0.9
-    });
-    return;
-  }
-  const position = entity?.position?.getValue?.(Cesium.JulianDate.now());
-  if (position) {
-    await viewer.flyTo(entity, { duration: 0.9 });
-  }
-}
-
-async function applyIssueGeoJson(geojson, meta = {}) {
-  await clearIssueDataSource();
-  issueFeaturesRaw = Array.isArray(geojson?.features) ? geojson.features : [];
-  if (issueFeaturesRaw.length === 0) {
-    updateIssueStats();
-    refreshIssueTypeOptions();
-    debugLog("qa issues empty", meta);
-    return;
-  }
-  const normalized = normalizeIssueGeoJsonForCesium(geojson);
-  issueDataSource = await Cesium.GeoJsonDataSource.load(normalized.normalized, { clampToGround: true });
-  viewer.dataSources.add(issueDataSource);
-  issueEntities = issueDataSource.entities.values.slice();
-  styleIssueEntities();
-  refreshIssueTypeOptions();
-  updateIssueStats();
-  applyIssueFilters();
-  debugLog("qa issues loaded", {
-    ...meta,
-    totalIssuesLoaded: normalized.debug.totalIssuesLoaded,
-    issuesWithRenderableGeometry: normalized.debug.issuesWithRenderableGeometry,
-    errorsRendered: normalized.debug.errorsRendered,
-    warningsRendered: normalized.debug.warningsRendered
-  });
-}
-
-function dedupe(arr) {
-  return [...new Set(arr.filter((v) => typeof v === "string" && v.length > 0))];
-}
-
-async function tryLoadIssueGeoJsonRemote(loaded, indexUrl) {
-  const candidates = [];
-  if (loaded?.visualizationIndex?.outputs?.qa?.issues && loaded?.visualizationIndexUrl) {
-    candidates.push(resolveRelativeAssetUrl(loaded.visualizationIndexUrl, loaded.visualizationIndex.outputs.qa.issues));
-  }
-  if (loaded?.visualizationIndexUrl) {
-    candidates.push(resolveRelativeAssetUrl(loaded.visualizationIndexUrl, "./analysis/issues.geojson"));
-  }
-  if (loaded?.threeDTilesIndexUrl) {
-    candidates.push(resolveRelativeAssetUrl(loaded.threeDTilesIndexUrl, "../analysis/issues.geojson"));
-    candidates.push(resolveRelativeAssetUrl(loaded.threeDTilesIndexUrl, "./analysis/issues.geojson"));
-  }
-  if (indexUrl) candidates.push(resolveRelativeAssetUrl(indexUrl, "./analysis/issues.geojson"));
-
-  for (const url of dedupe(candidates)) {
-    try {
-      const r = await fetch(url);
-      if (r.status === 404) {
-        debugLog("qa issue fetch 404 (treated as absent)", { url });
-        continue;
-      }
-      if (!r.ok) continue;
-      const json = await r.json();
-      if (json?.type === "FeatureCollection") return { url, json };
-    } catch {
-      // continue
-    }
-  }
-  return null;
-}
-
-async function tryLoadIssueGeoJsonLocal(visualizationIndex = null) {
-  const refs = [];
-  if (visualizationIndex?.outputs?.qa?.issues) refs.push(visualizationIndex.outputs.qa.issues);
-  refs.push("./analysis/issues.geojson", "analysis/issues.geojson", "issues.geojson");
-  for (const ref of refs) {
-    const normalized = String(ref).replace(/^\.\/+/, "");
-    const file = findLocal3dFile(normalized);
-    if (!file) continue;
-    try {
-      const json = JSON.parse(await file.text());
-      if (json?.type === "FeatureCollection") return { name: file.name, json };
-    } catch {
-      // continue
-    }
-  }
-  return null;
-}
-
-async function loadIssueLayerRemote(loaded, indexUrl) {
-  const issueLoaded = await tryLoadIssueGeoJsonRemote(loaded, indexUrl);
-  if (!issueLoaded) {
-    await clearIssueDataSource();
-    debugLog("qa issues not found for remote dataset");
-    return;
-  }
-  await applyIssueGeoJson(issueLoaded.json, { url: issueLoaded.url, mode: "remote" });
-}
-
-async function loadIssueLayerLocal(visualizationIndex = null) {
-  const issueLoaded = await tryLoadIssueGeoJsonLocal(visualizationIndex);
-  if (!issueLoaded) {
-    await clearIssueDataSource();
-    debugLog("qa issues not found in local selection");
-    return;
-  }
-  await applyIssueGeoJson(issueLoaded.json, { name: issueLoaded.name, mode: "local" });
-}
 
 function clearBlobUrls() {
   for (const u of localBlobUrls) URL.revokeObjectURL(u);
@@ -438,8 +118,8 @@ function clearBlobUrls() {
   rewrittenJsonByPath = new Map();
 }
 
-function makeBlobUrl(file) {
-  const url = URL.createObjectURL(file);
+async function makeBlobUrl(fileEntry) {
+  const url = URL.createObjectURL(await fileEntry.getFile());
   localBlobUrls.push(url);
   return url;
 }
@@ -462,6 +142,66 @@ function findLocal3dFile(uri) {
   return local3dFiles.get(clean) || local3dFiles.get(clean.replace(/^\.\/+/, "")) || local3dFiles.get(clean.split("/").pop());
 }
 
+function createLocal3dEntry(pathKey, source) {
+  const relativePath = String(pathKey || source?.webkitRelativePath || source?.name || "")
+    .replaceAll("\\\\", "/")
+    .replace(/^\/+/, "");
+  const name = relativePath.split("/").pop() || String(source?.name || "");
+  return {
+    name,
+    webkitRelativePath: relativePath,
+    async getFile() {
+      if (source && typeof source.getFile === "function") return source.getFile();
+      return source;
+    },
+    async text() {
+      const file = await this.getFile();
+      return file.text();
+    }
+  };
+}
+
+async function ingest3dDirectoryHandle(dirHandle, relativeBase = "") {
+  for await (const [entryName, handle] of dirHandle.entries()) {
+    const nextPath = relativeBase ? `${relativeBase}/${entryName}` : entryName;
+    if (handle.kind === "directory") {
+      await ingest3dDirectoryHandle(handle, nextPath);
+      continue;
+    }
+    const entry = createLocal3dEntry(nextPath, handle);
+    const clean = entry.webkitRelativePath.replace(/^\.\/+/, "");
+    local3dFiles.set(clean, entry);
+    local3dFiles.set(entry.name, entry);
+    if (entry.name === "visualization.index.json" && !localIndexFile) localIndexFile = entry;
+  }
+}
+
+async function pickLocal3dDirectory() {
+  if (typeof window.showDirectoryPicker === "function") {
+    const dirHandle = await window.showDirectoryPicker({ mode: "read" });
+    local3dFiles = new Map();
+    localIndexFile = null;
+    await ingest3dDirectoryHandle(dirHandle);
+    return;
+  }
+  indexFileInput.value = "";
+  indexFileInput.click();
+}
+
+function setLocal3dSelection(files = []) {
+  local3dFiles = new Map();
+  localIndexFile = null;
+  for (const file of files) {
+    if (!file) continue;
+    const entry = createLocal3dEntry(file.webkitRelativePath || file.name || "", file);
+    const clean = entry.webkitRelativePath.replace(/^\.\/+/, "");
+    if (!clean) continue;
+    local3dFiles.set(clean, entry);
+    local3dFiles.set(entry.name, entry);
+    if (entry.name === "visualization.index.json" && !localIndexFile) localIndexFile = entry;
+  }
+}
+
 function isLikelyJsonPath(p) {
   return /\.json$/i.test(String(p || ""));
 }
@@ -477,7 +217,7 @@ async function rewriteContentRef(basePath, refObj, key) {
     refObj[key] = await buildRewrittenTilesetUrl(f, resolvedPath);
     return;
   }
-  refObj[key] = makeBlobUrl(f);
+  refObj[key] = await makeBlobUrl(f);
 }
 
 async function rewriteTilesetObject(json, basePath) {
@@ -623,13 +363,12 @@ async function loadTileset() {
       statusSource = "local selection";
       debugLog("local tileset resolved", { tilesetUrl, bounds });
     } else {
-      const indexUrl = indexInput.value.trim();
-      if (!indexUrl) {
-        setStatus("Missing index URL (visualization.index.json or 3dtiles/index.json)");
+      if (!activeRemoteIndexUrl) {
+        setStatus("Select visualization.index.json.");
         return;
       }
 
-      remoteLoaded = await load3DTilesIndex(indexUrl);
+      remoteLoaded = await load3DTilesIndex(activeRemoteIndexUrl);
       const idx = remoteLoaded.threeDTilesIndex;
       tilesetUrl = resolveRelativeAssetUrl(remoteLoaded.threeDTilesIndexUrl, idx.tileset);
       bounds = idx.bounds;
@@ -667,18 +406,11 @@ async function loadTileset() {
     });
 
     setStatus(`Loaded 3D Tiles (${statusSource})`);
-
-    if (hasLocal) {
-      await loadIssueLayerLocal(localSelection?.visualizationIndex ?? null);
-    } else if (remoteLoaded) {
-      const indexUrl = indexInput.value.trim();
-      await loadIssueLayerRemote(remoteLoaded, indexUrl);
-    }
   } catch (err) {
     const msg = String(err?.message || err);
     debugError("tileset load failure", { message: msg });
     if (msg.includes("No local tileset.json found in selected files")) {
-      setStatus("Index file selected without dataset folder context. Select the dataset folder that contains visualization.index.json.");
+      setStatus("Selected folder is missing files referenced from visualization.index.json.");
       return;
     }
     setStatus(`Failed to load tileset: ${msg}`);
@@ -686,10 +418,6 @@ async function loadTileset() {
 }
 
 loadBtn.addEventListener("click", () => {
-  void loadTileset();
-});
-
-pickIndexFileBtn.addEventListener("click", () => {
   indexFileInput.value = "";
   indexFileInput.click();
 });
@@ -697,15 +425,17 @@ pickIndexFileBtn.addEventListener("click", () => {
 indexFileInput.addEventListener("change", async (ev) => {
   const file = ev.target.files?.[0];
   if (!file) return;
+  local3dFiles = new Map();
+  localIndexFile = null;
   try {
     const parsed = JSON.parse(await file.text());
     const resolved = await resolveRemoteIndexUrlFromSelectedJson(parsed);
     if (!resolved) {
-      setStatus("Cannot resolve served dataset URL from selected file. Use index URL manually (e.g. /artifacts/<dataset>/visualization.index.json).");
+      setStatus("Cannot resolve the served dataset URL from this visualization.index.json. Regenerate the dataset with a servedVisualizationIndexUrl hint or open it with ?index=/data/<folder>/visualization.index.json.");
       return;
     }
-    indexInput.value = resolved;
-    setStatus(`Resolved index URL: ${resolved}`);
+    activeRemoteIndexUrl = resolved;
+    setStatus(`Resolved dataset URL: ${resolved}`);
   } catch (err) {
     setStatus(`Invalid index file: ${err?.message || err}`);
     return;
@@ -713,27 +443,8 @@ indexFileInput.addEventListener("change", async (ev) => {
   void loadTileset();
 });
 
-qaShowIssuesEl?.addEventListener("change", () => {
-  applyIssueFilters();
-});
-qaSeverityEl?.addEventListener("change", () => {
-  applyIssueFilters();
-});
-qaTypeEl?.addEventListener("change", () => {
-  applyIssueFilters();
-});
-
-viewer.selectedEntityChanged.addEventListener((entity) => {
-  const props = entityIssueProps(entity);
-  renderIssueInspector(props);
-  highlightSelectedIssueEntity(props ? entity : null);
-  if (props) {
-    void zoomToIssueEntity(entity);
-  }
-});
-
 if (params.get("index")) {
   void loadTileset();
 } else {
-  setStatus("Select visualization.index.json or paste index URL, then click Load.");
+  setStatus("Click Load and select visualization.index.json.");
 }

@@ -36,8 +36,7 @@ export function usage() {
   arinc validate-relations <canonical.json> [--json]
 
 Notes:
-  - The CLI is orchestration-only; domain logic lives in workspace packages.
-  - Legacy monolithic runtime code is archived under legacy/src-monolith and unsupported.`);
+  - The CLI is orchestration-only; domain logic lives in the published workspace packages.`);
 }
 
 function readJson(file) {

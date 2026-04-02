@@ -12,7 +12,7 @@ const decoded = {
   warnings: []
 };
 
-test("validateProcedureLegSequence accepts ordered phase 1 chain", () => {
+test("validateProcedureLegSequence accepts ordered supported chain", () => {
   const result = validateProcedureLegSequence(decoded);
   assert.equal(result.valid, true);
   assert.deepEqual(result.errors, []);

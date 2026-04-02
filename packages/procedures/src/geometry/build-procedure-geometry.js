@@ -8,8 +8,8 @@ import { buildDFLeg } from "./legs/build-df.js";
 import { buildRFLeg } from "./legs/build-rf.js";
 import { buildAFLeg } from "./legs/build-af.js";
 
-// TODO (0.1.7):
-// Implement additional Attachment 5 leg types beyond phase 2 arcs.
+// TODO:
+// Implement additional Attachment 5 leg types beyond the current arc support.
 
 function buildUnsupportedLeg(decodedLeg) {
   return {

@@ -1,6 +1,6 @@
 {
   "name": "@arinc424/analysis",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Analysis and inspection helpers for ARINC canonical and feature models.",
   "type": "module",
   "license": "MIT",
@@ -28,8 +28,8 @@
     "README.md"
   ],
   "dependencies": {
-    "@arinc424/core": "0.1.7",
-    "@arinc424/features": "0.1.7"
+    "@arinc424/core": "0.1.8",
+    "@arinc424/features": "0.1.8"
   },
   "publishConfig": {
     "access": "public"
