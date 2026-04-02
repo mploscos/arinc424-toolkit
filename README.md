@@ -1,6 +1,6 @@
 # arinc424-toolkit
 
-Modular Node.js workspace for ARINC 424 parsing, canonical normalization, feature generation, tiled GeoJSON, 3D Tiles, analysis, and interactive viewers.
+Modular JavaScript and Node.js workspace for ARINC 424 parsing, canonical normalization, feature generation, tiled GeoJSON, 3D Tiles, analysis, and interactive viewers.
 
 <p align="center">
   <img src="./docs/Washington.png" alt="OpenLayers 2D viewer" width="49%" />
@@ -9,7 +9,7 @@ Modular Node.js workspace for ARINC 424 parsing, canonical normalization, featur
 
 ## Why this repo exists
 
-ARINC 424 tooling often ends up as a single opaque pipeline tied to one dataset or one viewer. This workspace splits the problem into reusable pieces:
+ARINC 424 tooling in JavaScript is still uncommon, and it often ends up as a single opaque pipeline tied to one dataset or one viewer. This workspace splits the problem into reusable pieces:
 
 - parse ARINC into a canonical model
 - derive a normalized geospatial feature model
@@ -17,7 +17,7 @@ ARINC 424 tooling often ends up as a single opaque pipeline tied to one dataset 
 - inspect airports, airspaces, waypoints, and procedures
 - visualize the result in OpenLayers and Cesium
 
-It is designed for people who want to build pipelines, validate data, or experiment with aviation cartography without rewriting the whole stack.
+It is designed for people who want an ARINC 424 toolkit in JavaScript/Node.js to build pipelines, validate data, or experiment with aviation cartography without rewriting the whole stack.
 
 ## Packages
 
