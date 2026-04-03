@@ -1,6 +1,8 @@
 # arinc424-toolkit
 
-Modular JavaScript and Node.js workspace for ARINC 424 parsing, canonical normalization, feature generation, tiled GeoJSON, 3D Tiles, analysis, and interactive viewers.
+End-to-end ARINC 424 pipeline for JavaScript and Node.js.
+
+Parse → normalize → generate features → tile → visualize (2D & 3D)
 
 <p align="center">
   <img src="./docs/2d.png" alt="OpenLayers 2D viewer" width="33%" />
@@ -8,46 +10,110 @@ Modular JavaScript and Node.js workspace for ARINC 424 parsing, canonical normal
   <img src="./docs/3d.png" alt="Cesium 3D viewer" width="33%" />
 </p>
 
-## Why this repo exists
+---
 
-ARINC 424 tooling in JavaScript is still uncommon, and it often ends up as a single opaque pipeline tied to one dataset or one viewer. This workspace splits the problem into reusable pieces:
+## ⚡ Quickstart (30 seconds)
 
-- parse ARINC into a canonical model
-- derive a normalized geospatial feature model
-- generate 2D tiles and 3D tiles
-- inspect airports, airspaces, waypoints, and procedures
-- visualize the result in OpenLayers and Cesium
+From raw ARINC to a visualizable dataset:
 
-It is designed for people who want an ARINC 424 toolkit in JavaScript/Node.js to build pipelines, validate data, or experiment with aviation cartography without rewriting the whole stack.
+```bash
+npm install @arinc424/toolkit
 
-## Packages
+arinc parse ./data/FAACIFP18.dat ./out/canonical.json
+arinc features ./out/canonical.json ./out/features.json
+arinc tiles ./out/features.json ./out/tiles
+```
 
-- `@arinc424/toolkit`: convenience metapackage and `arinc` CLI
-- `@arinc424/core`: ARINC parsing and canonical model
-- `@arinc424/features`: canonical to feature model
-- `@arinc424/procedures`: incremental Attachment 5 procedure decoding and geometry helpers
-- `@arinc424/analysis`: stats, inspectors, relations, and query helpers
-- `@arinc424/tiles`: grouped GeoJSON plus `z/x/y.json` tiling
-- `@arinc424/3dtiles`: 3D Tiles build pipeline
-- `@arinc424/view`: OpenLayers/Cesium adapters and example viewers
+Now open the viewer:
 
-## Install
+```
+http://localhost:8080/openlayers-tiles/?index=/out/visualization.index.json
+```
 
-Single entrypoint:
+👉 You now have a full ARINC dataset rendered without loading huge files in memory.
+
+---
+
+## ✨ What you get
+
+* Full ARINC 424 parsing in JavaScript
+* Canonical normalized model
+* GeoJSON-like feature model
+* Scalable tiled datasets (no 400MB JSON in browser)
+* 3D Tiles for Cesium
+* Procedure decoding (legs, arcs, holds…)
+* Interactive viewers (OpenLayers + Cesium)
+
+---
+
+## 🧠 Why this toolkit exists
+
+ARINC 424 tooling in JavaScript is still uncommon, and when it exists it is often:
+
+* tightly coupled to one dataset
+* tied to one viewer
+* difficult to reuse
+
+This project breaks the problem into a **composable pipeline**:
+
+```text
+ARINC → canonical → features → tiles → view
+```
+
+So you can:
+
+* build your own pipeline
+* inspect and validate aviation data
+* experiment with cartography
+* scale to large datasets without browser issues
+
+---
+
+## 📦 Install
+
+### Recommended (full pipeline)
 
 ```bash
 npm install @arinc424/toolkit
 ```
 
-Modular install:
+Best option if you want the full workflow from parsing to visualization.
+
+---
+
+### Modular install (advanced)
 
 ```bash
-npm install @arinc424/core @arinc424/features @arinc424/procedures @arinc424/analysis @arinc424/tiles @arinc424/3dtiles @arinc424/view
+npm install \
+  @arinc424/core \
+  @arinc424/features \
+  @arinc424/procedures \
+  @arinc424/analysis \
+  @arinc424/tiles \
+  @arinc424/3dtiles \
+  @arinc424/view
 ```
 
-## CLI
+Use this if you only need specific stages or want tighter control.
 
-Published package usage:
+---
+
+## 🧩 Packages
+
+| Package                | Purpose                                 |
+| ---------------------- | --------------------------------------- |
+| `@arinc424/core`       | ARINC parsing and canonical model       |
+| `@arinc424/features`   | Canonical → geospatial feature model    |
+| `@arinc424/procedures` | Procedure decoding (legs, arcs, holds…) |
+| `@arinc424/analysis`   | Stats, inspectors and queries           |
+| `@arinc424/tiles`      | Tiled GeoJSON generation (`z/x/y.json`) |
+| `@arinc424/3dtiles`    | 3D Tiles export                         |
+| `@arinc424/view`       | OpenLayers / Cesium visualization       |
+| `@arinc424/toolkit`    | All-in-one bundle + CLI                 |
+
+---
+
+## 🧪 CLI
 
 ```bash
 npm install @arinc424/toolkit
@@ -67,57 +133,43 @@ arinc inspect-airport <canonical.json> <id|ident> [--json]
 arinc inspect-waypoint <canonical.json> <id|ident> [--json]
 arinc inspect-procedure <canonical.json> <id|token> [--json]
 arinc procedure-geometry <canonical.json> <id|token> [--json]
-arinc query <canonical-or-features.json> [--layer L] [--type T] [--id X] [--bbox minX,minY,maxX,maxY] [--prop k=v] [--limit N] [--json]
-arinc related <canonical.json> (--airport X | --runway X | --waypoint X | --airway X | --procedure X | --airspace X) --relation R [--json]
-arinc validate-relations <canonical.json> [--json]
+arinc query <canonical-or-features.json> ...
 ```
 
-## Quick start
+---
 
-Run the pipeline from one ARINC file:
-
-```bash
-# 1. ARINC -> canonical
-arinc parse ./data/FAACIFP18.dat ./artifacts/demo/canonical.json
-
-# 2. canonical -> features
-arinc features ./artifacts/demo/canonical.json ./artifacts/demo/features.json
-
-# 3. features -> tiled GeoJSON
-arinc tiles ./artifacts/demo/features.json ./artifacts/demo/tiles --min-zoom 4 --max-zoom 10
-
-# 4. features -> 3D Tiles
-arinc 3dtiles ./artifacts/demo/features.json ./artifacts/demo/3dtiles
-```
-
-Programmatic use:
+## 🧑‍💻 Programmatic usage
 
 ```js
 import { core, features, procedures, analysis, tiles, threeDTiles } from "@arinc424/toolkit";
 
 const canonical = await core.parseArincFile("./data/FAACIFP18.dat");
 const featureModel = features.buildFeaturesFromCanonical(canonical);
-const procedureGeometry = procedures.buildProcedureGeometry(canonical, "procedure:PD:US:KPRC:PRC1:1:RW04");
+
+const procedureGeometry = procedures.buildProcedureGeometry(
+  canonical,
+  "procedure:PD:US:KPRC:PRC1:1:RW04"
+);
+
 const stats = analysis.summarizeDataset(canonical);
 
 const { manifest } = tiles.generateTiles(featureModel, {
-  outDir: "./artifacts/demo/tiles",
+  outDir: "./out/tiles",
   minZoom: 4,
-  maxZoom: 10,
-  simplify: true,
-  simplifyToleranceByZoom: { 4: 0.1, 6: 0.01, 8: 0.001 }
+  maxZoom: 10
 });
 
-tiles.writeTileManifest(manifest, "./artifacts/demo/tiles/manifest.json");
-await threeDTiles.build3DTilesFromFeatures(featureModel, { outDir: "./artifacts/demo/3dtiles" });
+await threeDTiles.build3DTilesFromFeatures(featureModel, {
+  outDir: "./out/3dtiles"
+});
 
 console.log(stats.entityCounts);
 console.log(procedureGeometry.warnings);
 ```
 
-## Viewers
+---
 
-Serve the examples:
+## 👁️ Viewers
 
 ```bash
 npm run view:examples
@@ -125,93 +177,75 @@ npm run view:examples
 
 Open:
 
-- OpenLayers: `http://localhost:8080/openlayers-tiles/?index=/artifacts/<dataset>/visualization.index.json`
-- Cesium: `http://localhost:8080/cesium-3dtiles/?index=/artifacts/<dataset>/visualization.index.json`
+* OpenLayers:
+  `http://localhost:8080/openlayers-tiles/?index=/artifacts/<dataset>/visualization.index.json`
+
+* Cesium:
+  `http://localhost:8080/cesium-3dtiles/?index=/artifacts/<dataset>/visualization.index.json`
 
 Useful query params:
 
-- `&debug=1`
-- `&basemap=muted`
-- `&basemap=standard`
+* `&debug=1`
+* `&basemap=muted`
+* `&basemap=standard`
 
-Current viewer focus:
+---
 
-- OpenLayers: 2D chart-like inspection for airspaces, aerovías, procedures, and waypoints
-- Cesium: 3D airspace and volume view
+## ⚠️ Large datasets
 
-## Large dataset run
+ARINC datasets can be very large (hundreds of MB).
 
-Use the integration runner for a full dataset:
+Avoid loading full files like:
 
-```bash
-npm run dataset:run -- \
-  --input /path/to/FAACIFP18.dat \
-  --out ./artifacts/faacifp18 \
-  --dataset FAACIFP18
-```
+* `features.json`
+* `procedure-legs.geojson`
 
-This produces, among other outputs:
+Instead:
 
-- `canonical.json`
-- `features.json`
-- `tiles/`
-- `3dtiles/`
-- `visualization.index.json`
+* use tiled datasets (`tiles/`)
+* use `visualization.index.json` as entry point
 
-## Current release: 0.1.9
+---
 
-Version `0.1.9` focuses on richer procedure depiction and more scalable viewer loading:
-
-- per-leg semantic and chart depiction models in `@arinc424/procedures`
-- chart-style OpenLayers rendering for holds, arcs, open legs, and editorial marks
-- lightweight `procedure-catalog.json` plus per-procedure artifacts for browser-friendly loading
-- cleaner procedure selection by chart family instead of isolated transition records
-- improved shared cartography tokens and better Cesium/OpenLayers color alignment
-- richer navaid display classes and improved 3D airspace styling controls
-
-Procedure support in `@arinc424/procedures` currently includes:
-
-- `IF`
-- `TF`
-- `CF`
-- `DF`
-- `RF`
-- `AF`
-- `HA`
-- `HF`
-- `HM`
-- `CA`
-- `FA`
-- `VA`
-- `VI`
-- `VM`
-- `FM`
-
-This is still an incremental Attachment 5 implementation, not a full FMS-grade engine.
-
-## Architecture
+## 🏗️ Architecture
 
 ```text
-ARINC424 -> @arinc424/core -> canonical model
-          -> @arinc424/procedures -> procedure geometry helpers
-          -> @arinc424/features -> feature model
-          -> @arinc424/analysis -> stats / inspect / query
-          -> @arinc424/tiles -> layers + clipped tiles + manifest
-          -> @arinc424/3dtiles -> 3D Tiles artifacts
-          -> @arinc424/view -> viewers and cartography helpers
+ARINC424 -> core -> canonical
+          -> procedures -> geometry
+          -> features -> feature model
+          -> analysis -> stats / inspect
+          -> tiles -> scalable tiles
+          -> 3dtiles -> Cesium output
+          -> view -> visualization
 ```
 
-Dependency direction:
+---
 
-- `core` -> none
-- `features` -> `core`
-- `procedures` -> `core`
-- `analysis` -> `core`, `features`
-- `tiles` -> `features`
-- `3dtiles` -> `features`
-- `view` -> consumes outputs
+## 📊 Current release: 0.1.9
 
-## Quality commands
+Focus:
+
+* richer procedure depiction
+* scalable viewer loading
+* per-procedure artifacts
+* chart-style rendering
+* improved Cesium/OpenLayers alignment
+
+---
+
+## 📚 Documentation
+
+* CHANGELOG.md
+* docs/analysis.md
+* docs/cartography.md
+* docs/procedures.md
+* docs/view-debug.md
+* docs/large-dataset.md
+* docs/testing.md
+
+---
+
+## 🧪 Quality
 
 ```bash
 npm install
@@ -219,23 +253,4 @@ npm test
 npm run test:golden
 npm run test:smoke
 npm run bench
-npm run update:golden
 ```
-
-## Documentation
-
-- [CHANGELOG.md](./CHANGELOG.md)
-- `docs/analysis.md`
-- `docs/cartography.md`
-- `docs/procedures.md`
-- `docs/view-debug.md`
-- `docs/large-dataset.md`
-- `docs/testing.md`
-- `docs/arinc-airspace-geometry.md`
-
-## Scope notes
-
-- `@arinc424/tiles` supports optional zoom-dependent simplification through `simplifyToleranceByZoom`.
-- Unsupported path terminators are preserved explicitly in metadata and warnings.
-- Parser robustness covers FAA CIFP and Jeppesen baseline datasets without weakening canonical validation.
-- OpenLayers is the primary 2D inspection surface; Cesium is the 3D context surface.
