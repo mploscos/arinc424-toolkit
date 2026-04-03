@@ -191,6 +191,62 @@ Useful query params:
 
 ---
 
+## 🛫 Generate and inspect procedures
+
+If you want chart-style procedure rendering in the OpenLayers example, generate procedure artifacts explicitly.
+
+Full dataset:
+
+```bash
+npm run dataset:run -- \
+  --input /path/to/FAACIFP18.dat \
+  --out ./data/faa \
+  --dataset FAACIFP18 \
+  --with-procedure-legs
+```
+
+Smaller test dataset:
+
+```bash
+npm run dataset:run -- \
+  --input /path/to/FAACIFP18.dat \
+  --out ./data/faa-test \
+  --dataset FAACIFP18_TEST \
+  --with-procedure-legs \
+  --procedure-legs-airport KSFO \
+  --procedure-legs-type APPROACH \
+  --skip-3dtiles
+```
+
+This emits, in addition to the normal dataset outputs:
+
+* `analysis/procedure-catalog.json`
+* split `analysis/procedure-legs/<airport>/<procedure>.geojson`
+* `visualization.index.json` with `outputs.procedures`
+
+Then open:
+
+```text
+http://localhost:8080/openlayers-tiles/?index=/data/faa-test/visualization.index.json
+```
+
+In the viewer:
+
+* choose `airport`
+* choose `type`
+* choose `chart`
+
+The example will then load only the selected chart family on demand and render:
+
+* arcs
+* holds
+* open legs
+* editorial marks and labels
+
+If the dataset was not generated with `--with-procedure-legs`, procedures are not shown in the viewer.
+
+---
+
 ## ⚠️ Large datasets
 
 ARINC datasets can be very large (hundreds of MB).
