@@ -70,7 +70,7 @@
         -72,
         41.583333333333336
       ],
-      "minZoom": 7,
+      "minZoom": 10,
       "maxZoom": 12,
       "sourceRefs": [
         {
@@ -129,7 +129,9 @@
         },
         "ident": "DPK",
         "navaidType": "VHF",
-        "frequency": "11790"
+        "frequency": "11790",
+        "navaidClass": "V",
+        "navaidDisplayClass": "vor"
       },
       "bbox": [
         -73.46666666666667,

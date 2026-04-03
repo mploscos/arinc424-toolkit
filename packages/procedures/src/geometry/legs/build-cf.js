@@ -9,6 +9,7 @@ export function buildCFLeg(decodedLeg, startCoord) {
     metadata: {
       ...decodedLeg.metadata,
       role: "course-to-fix",
+      geometryIntent: "course-to-fix",
       approximation: "Current implementation approximates CF as anchor-to-fix line; course-origin reconstruction is pending"
     },
     endCoord,

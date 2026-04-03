@@ -3,8 +3,9 @@
 Modular JavaScript and Node.js workspace for ARINC 424 parsing, canonical normalization, feature generation, tiled GeoJSON, 3D Tiles, analysis, and interactive viewers.
 
 <p align="center">
-  <img src="./docs/Washington.png" alt="OpenLayers 2D viewer" width="49%" />
-  <img src="./docs/Washington3d.png" alt="Cesium 3D viewer" width="49%" />
+  <img src="./docs/2d.png" alt="OpenLayers 2D viewer" width="33%" />
+  <img src="./docs/procedures.png" alt="procedures viewer" width="33%" />
+  <img src="./docs/3d.png" alt="Cesium 3D viewer" width="33%" />
 </p>
 
 ## Why this repo exists
@@ -157,15 +158,16 @@ This produces, among other outputs:
 - `3dtiles/`
 - `visualization.index.json`
 
-## Current release: 0.1.8
+## Current release: 0.1.9
 
-Version `0.1.8` focuses on viewer usability and repo presentation:
+Version `0.1.9` focuses on richer procedure depiction and more scalable viewer loading:
 
-- simpler dataset loading from `visualization.index.json`
-- cleaner OpenLayers/Cesium examples without viewer-side visual QA overlays
-- improved high-zoom OpenLayers behavior above tile max zoom
-- better point symbol and label pairing in the 2D viewer
-- README and docs cleanup for faster onboarding
+- per-leg semantic and chart depiction models in `@arinc424/procedures`
+- chart-style OpenLayers rendering for holds, arcs, open legs, and editorial marks
+- lightweight `procedure-catalog.json` plus per-procedure artifacts for browser-friendly loading
+- cleaner procedure selection by chart family instead of isolated transition records
+- improved shared cartography tokens and better Cesium/OpenLayers color alignment
+- richer navaid display classes and improved 3D airspace styling controls
 
 Procedure support in `@arinc424/procedures` currently includes:
 
@@ -175,6 +177,15 @@ Procedure support in `@arinc424/procedures` currently includes:
 - `DF`
 - `RF`
 - `AF`
+- `HA`
+- `HF`
+- `HM`
+- `CA`
+- `FA`
+- `VA`
+- `VI`
+- `VM`
+- `FM`
 
 This is still an incremental Attachment 5 implementation, not a full FMS-grade engine.
 

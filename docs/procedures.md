@@ -33,15 +33,30 @@ Unsupported path terminators are:
   "procedureId": "procedure:PD:US:KPRC:PRC1:1:RW04",
   "routeType": "PD",
   "transitionId": "RW04",
-  "legs": [
+  "applicability": {
+    "aircraftCategories": null,
+    "aircraftTypes": null,
+    "operationTypes": null
+  },
+  "commonLegs": [
     {
       "index": 0,
       "pathTerminator": "IF",
       "supported": true,
-      "geometry": { "type": "Point", "coordinates": [-72.8, 40.5] },
+      "semanticClass": "if",
+      "geometryKind": "point",
+      "depictionClass": "chart-point",
+      "semanticGeometry": {
+        "geometry": { "type": "Point", "coordinates": [-72.8, 40.5] }
+      },
+      "depictionGeometry": {
+        "geometry": { "type": "Point", "coordinates": [-72.8, 40.5] }
+      },
+      "legacyGeometry": { "type": "Point", "coordinates": [-72.8, 40.5] },
       "metadata": {}
     }
   ],
+  "branches": [],
   "geometry": { "type": "MultiLineString", "coordinates": [] },
   "warnings": []
 }
@@ -49,10 +64,14 @@ Unsupported path terminators are:
 
 ## Current interpretation notes
 
-- `IF`: initial fix anchor
-- `TF`: practical line between known fixes
-- `CF`: terminates at fix, currently approximated as anchor-to-fix line with warning metadata
-- `DF`: practical direct-to-fix line
-- `RF`: constant-radius arc between fixes, built from center + radius metadata
-- `AF`: arc-to-fix geometry using resolved center + radius metadata
-- chained legs are checked for geometry continuity and reported with warnings if gaps are detected
+- `IF`: point semantic + point chart depiction
+- `TF`: track semantic + chart line depiction
+- `CF`: course semantic + chart line depiction; currently approximated as anchor-to-fix geometry
+- `DF`: direct semantic + chart line depiction using practical anchor-to-fix geometry
+- `RF`: arc semantic + chart arc depiction with explicit arc curve metadata and sampled compatibility geometry
+- `AF`: arc semantic + chart arc depiction with explicit arc curve metadata and sampled compatibility geometry
+- `CA` / `FA` / `VA` / `VI` / `VM` / `FM`: recognized as open-leg extension points
+- `HA` / `HF` / `HM`: recognized as hold extension points
+- applicability is modeled separately from geometry and can appear at procedure, branch, or leg level
+- optional `branches` can carry category-specific or operation-specific route variants without duplicating shared `commonLegs`
+- chained legs are checked for depiction continuity with a practical configurable tolerance

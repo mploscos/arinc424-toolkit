@@ -3,6 +3,7 @@ import {
   isVisualizationIndex,
   resolveRelativeAssetUrl
 } from "./visualization-index.js";
+import { AIRSPACE_STYLE_PALETTE } from "../shared/chart-semantic-palette.js";
 const params = new URLSearchParams(window.location.search);
 const defaultIndexUrl = params.get("index") || "";
 const debugEnabled = params.get("debug") === "1";
@@ -57,15 +58,70 @@ const DEBUG_PREFIX = "[arinc-view:cesium]";
 const debugLog = (...args) => { if (debugEnabled) console.log(DEBUG_PREFIX, ...args); };
 const debugWarn = (...args) => { if (debugEnabled) console.warn(DEBUG_PREFIX, ...args); };
 const debugError = (...args) => { if (debugEnabled) console.error(DEBUG_PREFIX, ...args); };
-const SEMANTIC_AIRSPACE_PALETTE = Object.freeze({
-  controlledMajorFill: "rgba(58, 101, 168, 0.055)"
-});
-
 function rgbaStringToCesiumCss(rgba, alphaOverride = null) {
   const match = /^rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)$/.exec(String(rgba));
   if (!match) return rgba;
   const alpha = alphaOverride ?? Number(match[4]);
   return `rgba(${match[1].trim()},${match[2].trim()},${match[3].trim()},${alpha})`;
+}
+
+function parseRgba(rgba) {
+  const match = /^rgba?\(([^,]+),([^,]+),([^,]+)(?:,([^)]+))?\)$/.exec(String(rgba));
+  if (!match) return null;
+  return {
+    r: Math.max(0, Math.min(255, Number(match[1]))),
+    g: Math.max(0, Math.min(255, Number(match[2]))),
+    b: Math.max(0, Math.min(255, Number(match[3]))),
+    a: match[4] == null ? 1 : Math.max(0, Math.min(1, Number(match[4])))
+  };
+}
+
+function blendRgba(base, accent, accentWeight = 0.7) {
+  const a = parseRgba(base);
+  const b = parseRgba(accent);
+  if (!a || !b) return accent || base;
+  const w = Math.max(0, Math.min(1, accentWeight));
+  const mix = (x, y) => Math.round((x * (1 - w)) + (y * w));
+  return `rgba(${mix(a.r, b.r)},${mix(a.g, b.g)},${mix(a.b, b.b)},${(a.a * (1 - w)) + (b.a * w)})`;
+}
+
+function darkenRgba(rgba, factor = 0.82) {
+  const parsed = parseRgba(rgba);
+  if (!parsed) return rgba;
+  const f = Math.max(0, Math.min(1, factor));
+  return `rgba(${Math.round(parsed.r * f)},${Math.round(parsed.g * f)},${Math.round(parsed.b * f)},${parsed.a})`;
+}
+
+function cesiumAirspaceCss(token, alpha = 0.7, strokeWeight = 0.92) {
+  const darkerStroke = darkenRgba(token.stroke, 0.5);
+  const darkerFill = darkenRgba(token.fill, 0.76);
+  const emphasized = blendRgba(darkerFill, darkerStroke, strokeWeight);
+  return `color('${rgbaStringToCesiumCss(emphasized, alpha)}')`;
+}
+
+function buildAirspaceTilesetStyle() {
+  return new Cesium.Cesium3DTileStyle({
+    color: {
+      conditions: [
+        ["${restrictiveType} === 'D'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.danger, 0.88, 0.985)],
+        ["${restrictiveType} === 'R' || ${restrictiveType} === 'P'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.restrictive, 0.86, 0.98)],
+        ["${restrictiveType} === 'W'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.warning, 0.84, 0.975)],
+        ["${restrictiveType} === 'M'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.moa, 0.82, 0.97)],
+        ["${airspaceClass} === 'B'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.classB, 0.86, 0.98)],
+        ["${airspaceClass} === 'C'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.classC, 0.84, 0.975)],
+        ["${airspaceClass} === 'D'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.classD, 0.82, 0.97)],
+        ["${airspaceClass} === 'E'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.classE, 0.78, 0.965)],
+        ["${classification} === 'class-b'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.classB, 0.86, 0.98)],
+        ["${classification} === 'class-c'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.classC, 0.84, 0.975)],
+        ["${classification} === 'class-d'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.classD, 0.82, 0.97)],
+        ["${classification} === 'class-e'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.classE, 0.78, 0.965)],
+        ["${type} === 'UF'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.controlledMinor, 0.72, 0.95)],
+        ["${type} === 'UC'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.controlledMajor, 0.84, 0.975)],
+        ["${type} === 'UR'", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.restrictive, 0.86, 0.98)],
+        ["true", cesiumAirspaceCss(AIRSPACE_STYLE_PALETTE.fallback, 0.68, 0.94)]
+      ]
+    }
+  });
 }
 
 function setStatus(msg) {
@@ -392,9 +448,12 @@ async function loadTileset() {
     activeTileset = viewer.scene.primitives.add(tileset);
     await tileset.readyPromise;
     // Keep a chart-like readable 3D presentation without over-styling.
-    tileset.style = new Cesium.Cesium3DTileStyle({
-      color: `color('${rgbaStringToCesiumCss(SEMANTIC_AIRSPACE_PALETTE.controlledMajorFill, 0.42)}')`
-    });
+    if (Cesium?.Cesium3DTileColorBlendMode?.REPLACE != null) {
+      tileset.colorBlendMode = Cesium.Cesium3DTileColorBlendMode.REPLACE;
+    } else if (Cesium?.ColorBlendMode?.REPLACE != null) {
+      tileset.colorBlendMode = Cesium.ColorBlendMode.REPLACE;
+    }
+    tileset.style = buildAirspaceTilesetStyle();
 
     const usedBounds = await deriveAndLoadBoundsFromArray(bounds);
     if (!usedBounds) await viewer.zoomTo(tileset);

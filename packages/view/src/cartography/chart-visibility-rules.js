@@ -53,7 +53,14 @@ function matchesFocusFix(feature, focus) {
 }
 
 function isProcedureLayer(layer) {
-  return layer === "procedure" || layer === "procedures" || layer === "hold" || layer === "holds";
+  return [
+    "procedure",
+    "procedures",
+    "hold",
+    "holds",
+    "procedure-annotations",
+    "procedure-editorial"
+  ].includes(layer);
 }
 
 export function isFeatureVisibleInChartMode({
@@ -101,7 +108,7 @@ export function isFeatureVisibleInChartMode({
     }
     if (layer === "airways" || layer === "airway") {
       if (!inTerminalFocus) return false;
-      return classifyAirwayTier(feature) === "major" ? zoom >= 7 : zoom >= 9;
+      return zoom >= 10;
     }
     if (layer === "waypoints" || layer === "waypoint") return inTerminalLocal && zoom >= 10;
     if (layer === "navaids" || layer === "navaid") return inTerminalLocal && zoom >= 9;

@@ -273,6 +273,7 @@ function buildAirspaceMesh(features, globalBbox, minHeight, maxHeight, options =
     name: [],
     type: [],
     classification: [],
+    airspaceClass: [],
     restrictiveType: [],
     icao: [],
     lower_m_effective: [],
@@ -297,6 +298,7 @@ function buildAirspaceMesh(features, globalBbox, minHeight, maxHeight, options =
     batchTable.name.push(String(props.name || props.ident || props.icao || props.airspaceCenter || ""));
     batchTable.type.push(String(props.type || ""));
     batchTable.classification.push(String(props.classification || ""));
+    batchTable.airspaceClass.push(String(props.airspaceClass || ""));
     batchTable.restrictiveType.push(String(props.restrictiveType || ""));
     batchTable.icao.push(String(props.icao || ""));
     batchTable.lower_m_effective.push(Number.isFinite(lower) ? lower : 0);

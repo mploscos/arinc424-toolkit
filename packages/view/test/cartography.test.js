@@ -247,6 +247,30 @@ test("airspace semantics use restrained categories instead of one generic style"
   assert.ok(String(terminalStyle.fill).includes("rgba"));
 });
 
+test("airspace styling distinguishes class B/C/D/E and special-use details", () => {
+  const classB = { properties: { name: "CLASS B TEST", airspaceClass: "CLASS B", importance: "major" } };
+  const classD = { properties: { name: "CLASS D TEST", airspaceClass: "CLASS D", importance: "major" } };
+  const classE = { properties: { name: "CLASS E TEST", airspaceClass: "CLASS E", importance: "medium" } };
+  const warning = { properties: { name: "WARNING AREA", importance: "medium" } };
+
+  assert.equal(categorizeAirspaceFeatureProperties(classB).styleClass, "class-b");
+  assert.equal(categorizeAirspaceFeatureProperties(classD).styleClass, "class-d");
+  assert.equal(categorizeAirspaceFeatureProperties(classE).styleClass, "class-e");
+  assert.equal(categorizeAirspaceFeatureProperties(warning).styleClass, "warning");
+
+  const styleB = getAirspaceStyle(classB, 10);
+  const styleD = getAirspaceStyle(classD, 10);
+  const styleE = getAirspaceStyle(classE, 10);
+  const styleWarning = getAirspaceStyle(warning, 10);
+
+  assert.ok(styleB.width > styleD.width);
+  assert.ok(styleD.lineDash);
+  assert.ok(styleE.lineDash);
+  assert.ok(styleWarning.lineDash);
+  assert.notEqual(styleB.stroke, styleD.stroke);
+  assert.notEqual(styleD.stroke, styleE.stroke);
+});
+
 test("airways and labels are visually secondary at overview scales", () => {
   const majorAirway = {
     properties: { routeType: "JET", importance: "major", airwayName: "J60" }

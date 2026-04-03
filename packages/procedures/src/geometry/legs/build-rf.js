@@ -31,6 +31,14 @@ export function buildRFLeg(decodedLeg, startCoord) {
   const warnings = [];
   if (!arc.validation.startOk) warnings.push(`RF leg ${decodedLeg.index} start does not match expected radius`);
   if (!arc.validation.endOk) warnings.push(`RF leg ${decodedLeg.index} end does not match expected radius`);
+  const curve = {
+    type: "circular-arc",
+    center,
+    radiusNm,
+    direction,
+    startCoord,
+    endCoord
+  };
   const radiusDebug = {
     rawRadiusField: decodedLeg.arcRadiusRaw ?? null,
     parsedRadiusNm: radiusNm,
@@ -44,9 +52,12 @@ export function buildRFLeg(decodedLeg, startCoord) {
   return {
     geometry: { type: "LineString", coordinates: arc.points },
     bbox: bboxFromCoords(arc.points),
+    curve,
     metadata: {
       ...decodedLeg.metadata,
       role: "radius-to-fix",
+      geometryIntent: "arc",
+      displayModel: "Sampled arc preserved as compatibility LineString",
       legType: "RF",
       centerFixId: decodedLeg.centerFixId ?? null,
       centerFixRawId: decodedLeg.centerFixRawId ?? null,

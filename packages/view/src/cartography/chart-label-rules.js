@@ -1,4 +1,4 @@
-import { deriveProcedureDisplay } from "./style-system.js";
+import { categorizeAirspaceFeatureProperties, deriveProcedureDisplay } from "./style-system.js";
 import {
   CHART_MODE_ENROUTE,
   CHART_MODE_PROCEDURE,
@@ -13,7 +13,14 @@ function layerName(feature, descriptor) {
 }
 
 function isProcedureLayer(layer) {
-  return layer === "procedure" || layer === "procedures" || layer === "hold" || layer === "holds";
+  return [
+    "procedure",
+    "procedures",
+    "hold",
+    "holds",
+    "procedure-annotations",
+    "procedure-editorial"
+  ].includes(layer);
 }
 
 function matchesFocusFix(feature, focus) {
@@ -40,7 +47,11 @@ export function getLabelRuleForChartMode({
 
   if (chartMode === CHART_MODE_ENROUTE) {
     if (layer === "airspaces" || layer === "airspace") {
-      out.minZoom = Math.max(out.minZoom, 7);
+      const airspace = categorizeAirspaceFeatureProperties(feature);
+      if (airspace.styleClass === "class-b" || airspace.styleClass === "class-c") out.minZoom = Math.max(out.minZoom, 6);
+      else if (airspace.styleClass === "restrictive" || airspace.styleClass === "danger") out.minZoom = Math.max(out.minZoom, 7);
+      else if (airspace.styleClass === "class-d" || airspace.styleClass === "moa" || airspace.styleClass === "warning") out.minZoom = Math.max(out.minZoom, 8);
+      else out.minZoom = Math.max(out.minZoom, 9);
       return zoom >= out.minZoom ? out : { enabled: false };
     }
     if (layer === "airports" || layer === "airport") {
@@ -53,6 +64,13 @@ export function getLabelRuleForChartMode({
   if (chartMode === CHART_MODE_TERMINAL) {
     if (spatialContext.terminalFocusBBox && !bboxIntersects(getFeatureBBox(feature), spatialContext.terminalFocusBBox)) {
       return { enabled: false };
+    }
+    if (layer === "airspaces" || layer === "airspace") {
+      const airspace = categorizeAirspaceFeatureProperties(feature);
+      if (airspace.styleClass === "class-b" || airspace.styleClass === "class-c") out.minZoom = Math.max(out.minZoom, 7);
+      else if (airspace.styleClass === "class-d") out.minZoom = Math.max(out.minZoom, 8);
+      else if (airspace.styleClass === "class-e" || airspace.styleClass === "fallback") out.minZoom = Math.max(out.minZoom, 10);
+      else out.minZoom = Math.max(out.minZoom, 9);
     }
     if (layer === "airways" || layer === "airway") out.minZoom = Math.max(out.minZoom, 11);
     if (layer === "waypoints" || layer === "waypoint") out.minZoom = Math.max(out.minZoom, 13);

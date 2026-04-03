@@ -35,6 +35,8 @@
         "ident": "DPK",
         "navaidType": "VHF",
         "frequency": "11790",
+        "navaidClass": "V",
+        "navaidDisplayClass": "vor",
         "layer": "navaids"
       }
     }

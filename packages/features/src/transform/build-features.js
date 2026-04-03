@@ -7,11 +7,34 @@ const DEFAULT_ZOOM_RULES = {
   runways: [10, 15],
   waypoints: [9, 14],
   navaids: [8, 14],
-  airways: [7, 12],
+  airways: [10, 12],
   airspaces: [4, 12],
   procedures: [8, 15],
   holds: [11, 15]
 };
+
+function deriveServiceVolumeClass(navaid) {
+  const detail = String(navaid?.classDetail ?? "").trim().toUpperCase();
+  if (/^[LHT]/.test(detail)) return detail[0];
+  const raw = String(navaid?.classFullRaw ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  const match = raw.match(/[LHT]/);
+  return match ? match[0] : undefined;
+}
+
+function deriveNavaidDisplayClass(navaid) {
+  const type = String(navaid?.navaidType ?? "").trim().toUpperCase();
+  if (type === "NDB") return "ndb";
+  if (type !== "VHF") return undefined;
+  const klass = String(navaid?.class ?? "").trim().toUpperCase();
+  if (klass === "VT") return "vortac";
+  if (klass === "VD") return "vor_dme";
+  if (klass === "V") return "vor";
+  const raw = String(navaid?.classFullRaw ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  if (raw.startsWith("VT")) return "vortac";
+  if (raw.startsWith("VD")) return "vor_dme";
+  if (raw.startsWith("V")) return "vor";
+  return "vor";
+}
 
 function bboxFromGeometry(geometry) {
   const points = [];
@@ -149,7 +172,17 @@ export function buildFeaturesFromCanonical(canonical, options = {}) {
     const f = toFeature(
       "navaids",
       { type: "Point", coordinates: n.coord },
-      cleanObject({ ...baseProps(n, "navaid", canonical), ident: n.ident, navaidType: n.navaidType, frequency: n.frequency }),
+      cleanObject({
+        ...baseProps(n, "navaid", canonical),
+        ident: n.ident,
+        navaidType: n.navaidType,
+        frequency: n.frequency,
+        navaidClass: n.class,
+        navaidClassDetail: n.classDetail,
+        navaidClassRaw: n.classFullRaw,
+        navaidDisplayClass: deriveNavaidDisplayClass(n),
+        serviceVolumeClass: deriveServiceVolumeClass(n)
+      }),
       n.sourceRefs,
       zoomRules
     );

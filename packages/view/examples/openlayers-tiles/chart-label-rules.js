@@ -5,6 +5,7 @@ import {
   normalizeChartMode
 } from "./chart-modes.js";
 import { bboxIntersects, getFeatureBBox } from "./spatial-helpers.js";
+import { categorizeAirspaceFeature } from "./cartography-style-system.js";
 
 function matchesFocusFix(feature, focus) {
   if (!focus?.selected || !focus.fixIdents?.size) return false;
@@ -34,7 +35,11 @@ export function getLabelRuleForChartMode({
 
   if (chartMode === CHART_MODE_ENROUTE) {
     if (layer === "airspaces") {
-      out.minZoom = Math.max(out.minZoom, 7);
+      const airspace = categorizeAirspaceFeature(feature);
+      if (airspace.styleClass === "class-b" || airspace.styleClass === "class-c") out.minZoom = Math.max(out.minZoom, 6);
+      else if (airspace.styleClass === "restrictive" || airspace.styleClass === "danger") out.minZoom = Math.max(out.minZoom, 7);
+      else if (airspace.styleClass === "class-d" || airspace.styleClass === "moa" || airspace.styleClass === "warning") out.minZoom = Math.max(out.minZoom, 8);
+      else out.minZoom = Math.max(out.minZoom, 9);
       return zoom >= out.minZoom ? out : { enabled: false };
     }
     if (layer === "airports") {
@@ -48,12 +53,19 @@ export function getLabelRuleForChartMode({
     if (spatialContext.terminalFocusBBox && !bboxIntersects(getFeatureBBox(feature), spatialContext.terminalFocusBBox)) {
       return { enabled: false };
     }
+    if (layer === "airspaces") {
+      const airspace = categorizeAirspaceFeature(feature);
+      if (airspace.styleClass === "class-b" || airspace.styleClass === "class-c") out.minZoom = Math.max(out.minZoom, 7);
+      else if (airspace.styleClass === "class-d") out.minZoom = Math.max(out.minZoom, 8);
+      else if (airspace.styleClass === "class-e" || airspace.styleClass === "fallback") out.minZoom = Math.max(out.minZoom, 10);
+      else out.minZoom = Math.max(out.minZoom, 9);
+    }
     if (layer === "airways") out.minZoom = Math.max(out.minZoom, 11);
     if (layer === "waypoints") out.minZoom = Math.max(out.minZoom, 13);
     if (isProcedureLayer(layer)) {
       out.minZoom = Math.max(out.minZoom, 10);
       const meta = deriveProcedureDisplayFromFeature(feature);
-      const selected = procedureState.selected && procedureState.selected !== "all" && meta.key === procedureState.selected;
+      const selected = procedureState.selected && procedureState.selected !== "all" && (meta.familyKey || meta.key) === procedureState.selected;
       if (!selected) return { enabled: false };
     }
     return zoom >= out.minZoom ? out : { enabled: false };
@@ -65,7 +77,7 @@ export function getLabelRuleForChartMode({
     }
     if (isProcedureLayer(layer)) {
       const meta = deriveProcedureDisplayFromFeature(feature);
-      if (focusContext?.selected && meta.key !== focusContext.selectedKey) return { enabled: false };
+      if (focusContext?.selected && (meta.familyKey || meta.key) !== focusContext.selectedKey) return { enabled: false };
       out.minZoom = Math.max(out.minZoom, 10);
       return zoom >= out.minZoom ? out : { enabled: false };
     }

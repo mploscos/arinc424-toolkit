@@ -4,6 +4,62 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.9 - 2026-04-03
+
+Procedure depiction and scalable viewer-loading release.
+
+This release moves procedure rendering from generic line output toward chart-oriented semantic objects, adds browser-scalable procedure artifact loading, improves editorial display in OpenLayers, and strengthens airspace/navaid styling for both viewers.
+
+### Changed
+- Workspace package versions aligned to `0.1.9`.
+- `@arinc424/procedures` now builds per-leg semantic, depiction, and chart-object models instead of relying on generic downstream line semantics.
+- Procedure results now support applicability, branch structure, and chart/editorial metadata suitable for renderer-side filtering and styling.
+- OpenLayers procedure UX now selects chart families instead of isolated transition variants.
+- Viewer examples now rely on explicit procedure artifacts when available instead of tile-observed fallback discovery.
+- Shared semantic cartography tokens were introduced for OpenLayers and Cesium examples.
+- Cesium 3D airspace styling now uses semantic class/type conditions instead of a single flat color, with stronger contrast for volume readability.
+
+### Added
+- Procedure leg model fields including:
+  - `semanticClass`
+  - `geometryKind`
+  - `depictionClass`
+  - `chartObjectClass`
+  - `approximationLevel`
+  - `bounded`
+  - `semanticGeometry`
+  - `depictionGeometry`
+  - `legacyGeometry`
+  - `applicability`
+  - `branchId`
+- Chart-style support for:
+  - `IF`, `TF`, `CF`, `DF`, `RF`, `AF`
+  - `HA`, `HF`, `HM`
+  - `CA`, `FA`, `VA`, `VI`, `VM`, `FM`
+- OpenLayers editorial marks for procedures:
+  - direction arrows
+  - hold markers
+  - course / time / distance / speed / altitude labels
+  - open-end and intercept markers
+- Lightweight procedure browser artifacts:
+  - `analysis/procedure-catalog.json`
+  - split `analysis/procedure-legs/<airport>/<procedure>.geojson`
+- Richer navaid display classes from ARINC-derived data:
+  - `vor`
+  - `vor_dme`
+  - `vortac`
+  - `ndb`
+
+### Fixed
+- Browser examples no longer depend on FAA-wide `features.json` or FAA-wide `procedure-legs.geojson` fetches for procedure inspection.
+- OpenLayers selected-procedure overlays now render detailed runtime geometry from the loaded procedure artifact, including holds and arcs.
+- Cesium example no longer paints all airspaces with one unconditional blue style.
+- 3D tiles batch metadata now includes `airspaceClass` for richer Cesium airspace classification.
+
+### Removed
+- Legacy viewer-side procedure discovery fallbacks from tiles when `procedure-catalog.json` is absent.
+- Obsolete procedure debug rendering as a primary visible layer in the OpenLayers chart flow.
+
 ## 0.1.8 - 2026-04-03
 
 Viewer polish and release-surface cleanup.

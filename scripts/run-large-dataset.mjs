@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
+import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { parseArincFile, writeCanonicalModel } from "@arinc424/core";
 import { buildFeaturesFromCanonical, validateFeatureModel } from "@arinc424/features";
@@ -195,14 +196,28 @@ function computeBoundsFromFeatures(features) {
   let maxLon = -Infinity;
   let maxLat = -Infinity;
 
+  const visitCoordinate = (value) => {
+    if (!Array.isArray(value)) return;
+    if (value.length >= 2 && Number.isFinite(Number(value[0])) && Number.isFinite(Number(value[1]))) {
+      minLon = Math.min(minLon, Number(value[0]));
+      minLat = Math.min(minLat, Number(value[1]));
+      maxLon = Math.max(maxLon, Number(value[0]));
+      maxLat = Math.max(maxLat, Number(value[1]));
+      return;
+    }
+    for (const child of value) visitCoordinate(child);
+  };
+
   for (const f of features ?? []) {
     const b = f?.bbox;
-    if (!Array.isArray(b) || b.length !== 4) continue;
-    if (!b.every((n) => Number.isFinite(n))) continue;
-    minLon = Math.min(minLon, b[0]);
-    minLat = Math.min(minLat, b[1]);
-    maxLon = Math.max(maxLon, b[2]);
-    maxLat = Math.max(maxLat, b[3]);
+    if (Array.isArray(b) && b.length === 4 && b.every((n) => Number.isFinite(n))) {
+      minLon = Math.min(minLon, b[0]);
+      minLat = Math.min(minLat, b[1]);
+      maxLon = Math.max(maxLon, b[2]);
+      maxLat = Math.max(maxLat, b[3]);
+      continue;
+    }
+    visitCoordinate(f?.geometry?.coordinates);
   }
 
   if (!Number.isFinite(minLon)) return null;
@@ -352,10 +367,133 @@ function normalizeProcedureTypeFilter(value) {
 
 function canonicalProcedureCategory(procedure) {
   const raw = String(procedure?.procedureType || "").trim().toUpperCase();
-  if (raw === "APPROACH" || raw === "APP") return "APPROACH";
+  if (["APPROACH", "APP", "PA", "PF", "PI"].includes(raw)) return "APPROACH";
   if (raw === "STAR" || raw === "PE") return "STAR";
   if (raw === "SID" || raw === "PD") return "SID";
   return raw;
+}
+
+function parseProcedureIdParts(rawId) {
+  const text = String(rawId || "").trim();
+  if (!text) return {};
+  const parts = text.split(":");
+  if (parts[0] !== "procedure") return {};
+  return {
+    routeType: parts[1] ?? null,
+    airportIdent: parts[3] ?? null,
+    ident: parts[4] ?? null,
+    runwayToken: parts[6] ?? null
+  };
+}
+
+function normalizeAirportIdent(rawValue) {
+  const value = String(rawValue || "").trim();
+  if (!value) return null;
+  return value.replace(/^airport:[^:]+:/i, "") || null;
+}
+
+function normalizeRunwayToken(rawValue) {
+  const value = String(rawValue || "").trim();
+  if (!value) return null;
+  return value.replace(/^runway:/i, "") || null;
+}
+
+function deriveProcedureCatalogDisplay(procedure, bounds = null, legsPath = null) {
+  const parsed = parseProcedureIdParts(procedure?.id);
+  const procedureType = canonicalProcedureCategory(procedure);
+  const ident = String(procedure?.procedureName || procedure?.name || parsed.ident || "").trim() || null;
+  const airport = normalizeAirportIdent(procedure?.airportId || parsed.airportIdent);
+  const runway = normalizeRunwayToken(procedure?.runwayId || parsed.runwayToken);
+  const transition = String(procedure?.transitionId || "").trim() || null;
+  const labelParts = [];
+  if (ident) labelParts.push(ident);
+  if (runway) labelParts.push(runway);
+  if (transition && transition !== runway) labelParts.push(transition);
+  const displayLabel = labelParts.join(" ") || ident || transition || runway || `${procedureType} procedure`;
+  return {
+    id: procedure?.id ?? null,
+    procedureId: procedure?.id ?? null,
+    procedureType,
+    category: procedureType,
+    routeType: procedure?.procedureType ?? parsed.routeType ?? null,
+    procedureName: ident,
+    ident,
+    title: displayLabel,
+    displayLabel,
+    airport,
+    airportId: procedure?.airportId ?? null,
+    runway,
+    runwayId: procedure?.runwayId ?? null,
+    transition: transition,
+    transitionId: procedure?.transitionId ?? null,
+    bounds: Array.isArray(bounds) ? bounds : null,
+    legsAvailable: Boolean(legsPath),
+    editorialAvailable: Boolean(legsPath),
+    legsPath: legsPath || null
+  };
+}
+
+function createProcedureArtifactFileName(procedureId) {
+  const text = String(procedureId || "").trim();
+  const slug = text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "procedure";
+  const hash = createHash("sha1").update(text).digest("hex").slice(0, 12);
+  return `${slug}-${hash}.geojson`;
+}
+
+export function buildSplitProcedureArtifacts(procedures, featureCollection, options = {}) {
+  const features = Array.isArray(featureCollection?.features) ? featureCollection.features : [];
+  const baseCatalogPath = String(options.catalogBasePath || "./analysis").replace(/\/+$/, "");
+  const legsBasePath = String(options.legsBasePath || `${baseCatalogPath}/procedure-legs`).replace(/\/+$/, "");
+  const featuresByProcedureId = new Map();
+
+  for (const feature of features) {
+    const procedureId = String(feature?.properties?.procedureId || feature?.procedureId || "").trim();
+    if (!procedureId) continue;
+    const bucket = featuresByProcedureId.get(procedureId) ?? [];
+    bucket.push(feature);
+    featuresByProcedureId.set(procedureId, bucket);
+  }
+
+  const catalogEntries = [];
+  const legArtifacts = [];
+
+  for (const procedure of procedures || []) {
+    const procedureId = String(procedure?.id || "").trim();
+    if (!procedureId) continue;
+    const procedureFeatures = featuresByProcedureId.get(procedureId) ?? [];
+    const airport = normalizeAirportIdent(procedure?.airportId) || "_unknown";
+    const relativeLegsPath = procedureFeatures.length > 0
+      ? `${legsBasePath}/${airport}/${createProcedureArtifactFileName(procedureId)}`
+      : null;
+    catalogEntries.push(deriveProcedureCatalogDisplay(
+      procedure,
+      procedureFeatures.length > 0 ? computeBoundsFromFeatures(procedureFeatures) : null,
+      relativeLegsPath
+    ));
+    if (procedureFeatures.length > 0 && relativeLegsPath) {
+      legArtifacts.push({
+        procedureId,
+        relativePath: relativeLegsPath,
+        featureCollection: {
+          type: "FeatureCollection",
+          features: procedureFeatures
+        }
+      });
+    }
+  }
+
+  return {
+    catalog: {
+      type: "procedure-catalog",
+      version: "1.0",
+      procedures: catalogEntries
+    },
+    legArtifacts
+  };
 }
 
 function filterProceduresForDebug(canonical, args) {
@@ -391,6 +529,8 @@ async function main() {
   const threeDTilesDir = path.join(args.out, "3dtiles");
   const analysisDir = path.join(args.out, "analysis");
   const procedureLegsPath = path.join(analysisDir, "procedure-legs.geojson");
+  const procedureCatalogPath = path.join(analysisDir, "procedure-catalog.json");
+  const splitProcedureLegsDir = path.join(analysisDir, "procedure-legs");
 
   const report = {
     run: {
@@ -473,6 +613,7 @@ async function main() {
 
   let procedureLegs = null;
   let procedureLegSelectionCount = 0;
+  let splitProcedureArtifacts = null;
   if (args.withProcedureLegs) {
     const selectedProcedures = filterProceduresForDebug(canonical, args);
     procedureLegSelectionCount = selectedProcedures.length;
@@ -511,9 +652,15 @@ async function main() {
       selectedProcedures: procedureLegSelectionCount,
       featureCount: procedureLegs.features?.length ?? 0
     });
+    splitProcedureArtifacts = buildSplitProcedureArtifacts(selectedProcedures, procedureLegs, {
+      catalogBasePath: "./analysis",
+      legsBasePath: "./analysis/procedure-legs"
+    });
   } else {
     try {
       fs.rmSync(procedureLegsPath, { force: true });
+      fs.rmSync(procedureCatalogPath, { force: true });
+      fs.rmSync(splitProcedureLegsDir, { recursive: true, force: true });
     } catch {
       // ignore stale debug artifact cleanup failures
     }
@@ -525,9 +672,20 @@ async function main() {
   if (procedureLegs) {
     writeJson(procedureLegsPath, procedureLegs);
   }
+  if (splitProcedureArtifacts) {
+    fs.rmSync(splitProcedureLegsDir, { recursive: true, force: true });
+    fs.mkdirSync(splitProcedureLegsDir, { recursive: true });
+    writeJson(procedureCatalogPath, splitProcedureArtifacts.catalog);
+    for (const artifact of splitProcedureArtifacts.legArtifacts) {
+      const outputPath = path.join(args.out, artifact.relativePath.replace(/^\.\//, ""));
+      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+      writeJson(outputPath, artifact.featureCollection);
+    }
+  }
   endStage("analysis-write", analysisWriteStart, {
     issueCount: issues.summary?.issueCount ?? issues.features?.length ?? 0,
-    procedureLegCount: procedureLegs?.features?.length ?? 0
+    procedureLegCount: procedureLegs?.features?.length ?? 0,
+    splitProcedureArtifacts: splitProcedureArtifacts?.legArtifacts?.length ?? 0
   });
   report.stages.analysis = {
     valid: consistency.valid,
@@ -536,7 +694,10 @@ async function main() {
     issueCount: issues.summary?.issueCount ?? issues.features?.length ?? 0,
     procedureLegsGenerated: Boolean(procedureLegs),
     procedureLegCount: procedureLegs?.features?.length ?? 0,
-    procedureLegSelectionCount
+    procedureLegSelectionCount,
+    procedureCatalogGenerated: Boolean(splitProcedureArtifacts),
+    procedureCatalogCount: splitProcedureArtifacts?.catalog?.procedures?.length ?? 0,
+    splitProcedureArtifactCount: splitProcedureArtifacts?.legArtifacts?.length ?? 0
   };
 
   if (args.skipTiles) {
@@ -608,6 +769,10 @@ async function main() {
   if (procedureLegs) {
     outputs.debug = {
       procedureLegs: "./analysis/procedure-legs.geojson"
+    };
+    outputs.procedures = {
+      type: "procedure-artifacts",
+      catalog: "./analysis/procedure-catalog.json"
     };
   }
 
@@ -691,4 +856,4 @@ if (isEntrypoint) {
   });
 }
 
-export { summarizeTiles, listFilesRecursive };
+export { summarizeTiles, listFilesRecursive, canonicalProcedureCategory };

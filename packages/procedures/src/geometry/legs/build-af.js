@@ -29,13 +29,24 @@ export function buildAFLeg(decodedLeg, startCoord) {
   const warnings = [];
   if (!arc.validation.startOk) warnings.push(`AF leg ${decodedLeg.index} start does not match expected radius`);
   if (!arc.validation.endOk) warnings.push(`AF leg ${decodedLeg.index} end does not match expected radius`);
+  const curve = {
+    type: "circular-arc",
+    center,
+    radiusNm,
+    direction,
+    startCoord,
+    endCoord
+  };
 
   return {
     geometry: { type: "LineString", coordinates: arc.points },
     bbox: bboxFromCoords(arc.points),
+    curve,
     metadata: {
       ...decodedLeg.metadata,
       role: "arc-to-fix",
+      geometryIntent: "arc",
+      displayModel: "Sampled arc preserved as compatibility LineString",
       legType: "AF",
       centerFixId: decodedLeg.centerFixId ?? null,
       centerFixRawId: decodedLeg.centerFixRawId ?? null,

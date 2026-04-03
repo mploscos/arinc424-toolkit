@@ -4,6 +4,7 @@ import {
   listDefaultLayerDescriptors
 } from "./layer-descriptors.js";
 import { buildLabelCandidates } from "./label-candidates.js";
+import { buildProcedureRenderLayers } from "../procedures/build-procedure-render-layers.js";
 
 function mergeBounds(a, b) {
   if (!a) return b ? [...b] : null;
@@ -56,14 +57,36 @@ function normalizeLayerName(layerName) {
   return key;
 }
 
+function collectProcedureFeatures(featureModel) {
+  const procedureResults = [
+    ...(Array.isArray(featureModel?.procedureResults) ? featureModel.procedureResults : []),
+    ...(Array.isArray(featureModel?.procedures) ? featureModel.procedures : [])
+  ];
+  if (procedureResults.length === 0) return [];
+
+  const renderOptions = featureModel?.procedureRenderOptions ?? {};
+  const features = [];
+  for (const procedureResult of procedureResults) {
+    const renderModel = buildProcedureRenderLayers(procedureResult, renderOptions);
+    features.push(...(renderModel.allFeatures ?? [...renderModel.features, ...(renderModel.annotationFeatures ?? [])]));
+  }
+  return features;
+}
+
 /**
  * Build a rendering-oriented cartography descriptor.
- * @param {{features?:Array<object>}} featureModel
+ * Stable input contracts remain supported through `featureModel.features`.
+ * Procedure results can additionally be passed through `featureModel.procedureResults`.
+ *
+ * @param {{features?:Array<object>,procedureResults?:Array<object>,procedures?:Array<object>,procedureRenderOptions?:object}} featureModel
  * @param {{layers?:string[],bounds?:number[],minZoom?:number,maxZoom?:number}} [seed]
  * @returns {{layers:Array<object>,labelCandidates:Array<object>,bounds:number[]|null}}
  */
 export function buildCartography(featureModel, seed = {}) {
-  const features = Array.isArray(featureModel?.features) ? featureModel.features : [];
+  const features = [
+    ...(Array.isArray(featureModel?.features) ? featureModel.features : []),
+    ...collectProcedureFeatures(featureModel)
+  ];
   const layerMap = new Map();
   const seedLayers = Array.isArray(seed.layers) ? seed.layers : [];
 
@@ -76,20 +99,28 @@ export function buildCartography(featureModel, seed = {}) {
       minZoom: descriptor.minZoom,
       maxZoom: descriptor.maxZoom,
       availableMinZoom: Number.isFinite(seed.minZoom) ? seed.minZoom : null,
-      availableMaxZoom: Number.isFinite(seed.maxZoom) ? seed.maxZoom : null
+      availableMaxZoom: Number.isFinite(seed.maxZoom) ? seed.maxZoom : null,
+      depictionClasses: new Set(),
+      semanticClasses: new Set(),
+      branchIds: new Set(),
+      chartObjectClasses: new Set()
     });
   }
 
   let globalBounds = Array.isArray(seed.bounds) && seed.bounds.length === 4 ? [...seed.bounds] : null;
 
   for (const feature of features) {
-    const layerName = normalizeLayerName(feature?.layer);
+    const layerName = normalizeLayerName(feature?.layer ?? feature?.properties?.layer);
     const descriptor = layerMap.get(layerName) || (() => {
       const def = getDefaultLayerDescriptor(layerName);
       const fresh = {
         ...def,
         bounds: null,
-        featureCount: 0
+        featureCount: 0,
+        depictionClasses: new Set(),
+        semanticClasses: new Set(),
+        branchIds: new Set(),
+        chartObjectClasses: new Set()
       };
       layerMap.set(layerName, fresh);
       return fresh;
@@ -99,6 +130,12 @@ export function buildCartography(featureModel, seed = {}) {
     const featureGeomType = geometryTypeFromGeometry(feature.geometry);
     if (descriptor.geometryType === "mixed") descriptor.geometryType = featureGeomType;
     else if (descriptor.geometryType !== featureGeomType) descriptor.geometryType = "mixed";
+
+    const props = feature?.properties ?? {};
+    if (props.depictionClass) descriptor.depictionClasses.add(props.depictionClass);
+    if (props.semanticClass) descriptor.semanticClasses.add(props.semanticClass);
+    if (props.branchId) descriptor.branchIds.add(props.branchId);
+    if (props.chartObjectClass) descriptor.chartObjectClasses.add(props.chartObjectClass);
 
     const fBounds = normalizeFeatureBounds(feature);
     descriptor.bounds = mergeBounds(descriptor.bounds, fBounds);
@@ -129,6 +166,10 @@ export function buildCartography(featureModel, seed = {}) {
       availableMaxZoom: Number.isFinite(layer.availableMaxZoom) ? layer.availableMaxZoom : null,
       styleHint: layer.styleHint,
       label: layer.label,
+      depictionClasses: [...layer.depictionClasses].sort(),
+      semanticClasses: [...layer.semanticClasses].sort(),
+      branchIds: [...layer.branchIds].sort(),
+      chartObjectClasses: [...layer.chartObjectClasses].sort(),
       simplifyHint: {
         4: 0.1,
         6: 0.01,
@@ -137,12 +178,15 @@ export function buildCartography(featureModel, seed = {}) {
     }));
 
   if (layers.length === 0 && seedLayers.length === 0) {
-    // Provide deterministic empty defaults for tooling that expects at least known layer metadata.
     for (const descriptor of listDefaultLayerDescriptors()) {
       layers.push({
         ...descriptor,
         bounds: null,
         featureCount: 0,
+        depictionClasses: [],
+        semanticClasses: [],
+        branchIds: [],
+        chartObjectClasses: [],
         simplifyHint: { 4: 0.1, 6: 0.01, 8: 0.001 }
       });
     }

@@ -22,7 +22,7 @@ export function createProcedureFocusContext(features = [], selectedProcedureKey 
   for (const feature of features ?? []) {
     const props = feature?.get ? Object.fromEntries(feature.getKeys().map((key) => [key, feature.get(key)])) : (feature?.properties ?? feature ?? {});
     const meta = deriveProcedureDisplayFromProps(props);
-    if (meta.key !== selectedKey) continue;
+    if ((meta.familyKey || meta.key) !== selectedKey) continue;
     focus.airport ||= meta.airport || null;
     focus.runway ||= meta.runway || null;
     focus.transition ||= meta.transition || null;

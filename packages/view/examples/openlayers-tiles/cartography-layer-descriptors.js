@@ -43,7 +43,7 @@ const DEFAULT_LAYER_DESCRIPTORS = Object.freeze({
     name: "airways",
     geometryType: "line",
     styleHint: "airway",
-    minZoom: 5,
+    minZoom: 10,
     maxZoom: 22,
     label: { enabled: true, minZoom: 10, priority: 54, fields: ["airwayName", "name", "id"] }
   },
@@ -59,7 +59,7 @@ const DEFAULT_LAYER_DESCRIPTORS = Object.freeze({
     name: "procedures",
     geometryType: "line",
     styleHint: "procedure",
-    minZoom: 7,
+    minZoom: 10,
     maxZoom: 22,
     label: { enabled: true, minZoom: 9, priority: 56, fields: ["procedureName", "name", "ident", "procedureId", "id"] }
   },
@@ -67,7 +67,7 @@ const DEFAULT_LAYER_DESCRIPTORS = Object.freeze({
     name: "procedure",
     geometryType: "line",
     styleHint: "procedure",
-    minZoom: 7,
+    minZoom: 10,
     maxZoom: 22,
     label: { enabled: true, minZoom: 9, priority: 56, fields: ["procedureName", "name", "ident", "procedureId", "id"] }
   },
@@ -75,7 +75,39 @@ const DEFAULT_LAYER_DESCRIPTORS = Object.freeze({
     name: "holds",
     geometryType: "line",
     styleHint: "hold",
-    minZoom: 12,
+    minZoom: 10,
+    maxZoom: 22,
+    label: { enabled: false, minZoom: 99, priority: 0, fields: [] }
+  },
+  hold: {
+    name: "hold",
+    geometryType: "line",
+    styleHint: "hold",
+    minZoom: 10,
+    maxZoom: 22,
+    label: { enabled: false, minZoom: 99, priority: 0, fields: [] }
+  },
+  "procedure-annotations": {
+    name: "procedure-annotations",
+    geometryType: "point",
+    styleHint: "procedure-annotation",
+    minZoom: 10,
+    maxZoom: 22,
+    label: { enabled: true, minZoom: 10, priority: 72, fields: ["annotationText", "procedureId", "id"] }
+  },
+  "procedure-annotation": {
+    name: "procedure-annotation",
+    geometryType: "point",
+    styleHint: "procedure-annotation",
+    minZoom: 10,
+    maxZoom: 22,
+    label: { enabled: true, minZoom: 10, priority: 72, fields: ["annotationText", "procedureId", "id"] }
+  },
+  "procedure-editorial": {
+    name: "procedure-editorial",
+    geometryType: "point",
+    styleHint: "procedure-editorial",
+    minZoom: 10,
     maxZoom: 22,
     label: { enabled: false, minZoom: 99, priority: 0, fields: [] }
   }

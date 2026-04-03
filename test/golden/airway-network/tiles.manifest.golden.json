@@ -4,7 +4,7 @@
   "generatedAt": null,
   "minZoom": 4,
   "maxZoom": 10,
-  "tileCount": 23,
+  "tileCount": 15,
   "layers": [
     "airways",
     "navaids",

@@ -42,3 +42,17 @@ export {
   extractSegmentPoints,
   computeGeometryStats
 } from "./debug/geometry-debug-overlay.js";
+
+export {
+  filterProcedureLegs,
+  procedureLegToOpenLayersFeature,
+  procedureLegToOpenLayersAnnotationFeature,
+  procedureLegToOpenLayersEditorialFeatures,
+  buildProcedureRenderModel,
+  buildProcedureRenderLayers,
+  getProcedureLayerName,
+  getProcedureStyleHint,
+  buildProcedureDebugLabel,
+  buildProcedureFeatureProperties,
+  buildProcedureAnnotationText
+} from "./procedures/index.js";

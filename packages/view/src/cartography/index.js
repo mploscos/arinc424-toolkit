@@ -1,4 +1,5 @@
 export { buildCartography } from "./build-cartography.js";
+export { buildProcedureRenderModel, buildProcedureRenderLayers } from "../procedures/build-procedure-render-layers.js";
 export {
   CHART_MODE_ENROUTE,
   CHART_MODE_TERMINAL,

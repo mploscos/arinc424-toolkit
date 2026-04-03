@@ -94,55 +94,30 @@
         Vector layers can be inspected beyond tile max zoom.
       </div>
       <div style="font-size:11px; margin-top:8px; border-top:1px solid #d9e2d9; padding-top:6px">
-        <div><strong>Chart mode</strong></div>
-        <label for="chartMode">mode</label>
-        <select id="chartMode">
-          <option value="ENROUTE">ENROUTE</option>
-          <option value="TERMINAL" selected>TERMINAL</option>
-          <option value="PROCEDURE">PROCEDURE</option>
-        </select>
+        <div><strong>Chart View</strong></div>
+        <div style="opacity:0.85">Terminal-style base layers by zoom, selected procedure overlay on demand.</div>
         <div id="chartModeStatus" style="margin-top:6px; opacity:0.85"></div>
         <div id="chartFocusStatus" style="margin-top:4px; opacity:0.82"></div>
         <div id="zoomDebugStatus" style="margin-top:4px; opacity:0.8"></div>
       </div>
       <div style="font-size:11px; margin-top:8px; border-top:1px solid #d9e2d9; padding-top:6px">
         <div><strong>Procedures</strong></div>
-        <label><input id="procShow" type="checkbox" /> show procedures</label><br />
         <label for="procAirport">airport</label>
         <select id="procAirport">
           <option value="all">all</option>
         </select>
-        <label for="procRunway">runway</label>
-        <select id="procRunway">
-          <option value="all">all</option>
-        </select><br />
         <label for="procType">type</label>
         <select id="procType">
           <option value="all">all</option>
           <option value="SID">SID</option>
           <option value="STAR">STAR</option>
           <option value="APPROACH">APPROACH</option>
-        </select>
-        <label for="procTransition">transition</label>
-        <select id="procTransition">
-          <option value="all">all</option>
         </select><br />
-        <label for="procName">procedure</label>
-        <input id="procName" type="text" placeholder="ident / name / internal id" style="max-width:180px" />
-        <label for="procSelect">procedure</label>
+        <label for="procSelect">chart</label>
         <select id="procSelect">
           <option value="all">all</option>
-        </select>
-        <label for="procLegType">leg</label>
-        <select id="procLegType">
-          <option value="all">all</option>
         </select><br />
-        <label><input id="procSelectedOnly" type="checkbox" /> selected procedure only</label>
         <div id="procLayerStatus" style="margin-top:6px; opacity:0.85"></div>
-        <div id="procDebugNotice" style="margin-top:4px; color:#8a3b00; display:none"></div>
-        <div id="procDebugZoomNote" style="margin-top:4px; color:#35563f; display:none">
-          Procedure debug layer is vector-based and can be inspected beyond tile max zoom.
-        </div>
       </div>
       <div id="debugControls" style="display:none; font-size:11px; margin-top:8px; border-top:1px solid #d9e2d9; padding-top:6px">
         <div><strong>Debug controls</strong></div>
@@ -150,9 +125,7 @@
         <label><input id="dbgArcCenters" type="checkbox" /> arc centers</label><br />
         <label><input id="dbgSegmentPoints" type="checkbox" /> segment points</label><br />
         <label><input id="dbgTileGrid" type="checkbox" checked /> tile grid</label><br />
-        <label><input id="dbgProcLegColors" type="checkbox" /> debug procedure leg colors</label><br />
-        <label><input id="dbgProcLegOnly" type="checkbox" checked /> show only per-leg debug layer</label><br />
-        <label><input id="dbgProcFocus" type="checkbox" /> procedure debug focus mode</label><br />
+        <label><input id="dbgProcFocus" type="checkbox" /> procedure focus mode</label><br />
         <label><input id="dbgAirspaceColors" type="checkbox" /> debug airspace colors</label><br />
         <label><input id="dbgSpatialFocus" type="checkbox" /> draw spatial focus bbox</label>
         <div id="debugLegend" style="display:none; margin-top:6px; opacity:0.9"></div>

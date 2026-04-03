@@ -56,3 +56,30 @@ test("validateProcedureLegSequence warns when RF/AF metadata is incomplete", () 
   assert.ok(result.warnings.some((item) => /RF.*missing center fix/.test(item)));
   assert.ok(result.warnings.some((item) => /AF.*missing radius/.test(item)));
 });
+
+test("validateProcedureLegSequence handles common legs and branches", () => {
+  const result = validateProcedureLegSequence({
+    procedureId: "procedure:test:4",
+    warnings: [],
+    commonLegs: [
+      { index: 0, seq: 1, pathTerminator: "IF", supported: true, fixId: "fix:1" },
+      { index: 1, seq: 2, pathTerminator: "TF", supported: true, fixId: "fix:2" }
+    ],
+    branches: [
+      {
+        id: "cat-a-b",
+        applicability: { aircraftCategories: ["A", "B"], aircraftTypes: null, operationTypes: null },
+        legs: [
+          { index: 0, seq: 3, pathTerminator: "CA", supported: true, fixId: null }
+        ]
+      }
+    ],
+    legs: [
+      { index: 0, seq: 1, pathTerminator: "IF", supported: true, fixId: "fix:1" },
+      { index: 1, seq: 2, pathTerminator: "TF", supported: true, fixId: "fix:2" }
+    ]
+  });
+
+  assert.equal(result.valid, true);
+  assert.ok(result.warnings.some((item) => /Branch cat-a-b: Leg 0 \(CA\) has no nav\/course block; open-leg depiction may be omitted/.test(item)));
+});

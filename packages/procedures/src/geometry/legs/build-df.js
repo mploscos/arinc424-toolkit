@@ -9,7 +9,8 @@ export function buildDFLeg(decodedLeg, startCoord) {
     metadata: {
       ...decodedLeg.metadata,
       role: "direct-to-fix",
-      approximation: "Current implementation uses practical direct line to fix"
+      geometryIntent: "direct-to-fix",
+      displayModel: "Direct line from current anchor to terminating fix"
     },
     endCoord,
     warning: geometry ? null : `DF leg ${decodedLeg.index} could not be built because start or end fix is unresolved`

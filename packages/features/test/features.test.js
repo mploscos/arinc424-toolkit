@@ -13,7 +13,19 @@ const canonical = {
     heliports: [],
     runways: [],
     waypoints: [{ id: "waypoint:EA:US:K2:DIXIE", type: "waypoint", ident: "DIXIE", coord: [-73.1, 40.2], sourceRefs: [{ ...sourceRef, entityType: "waypoints", entityId: "waypoint:EA:US:K2:DIXIE" }] }],
-    navaids: [],
+    navaids: [{
+      id: "navaid:D:US:ABQ",
+      type: "navaid",
+      ident: "ABQ",
+      name: "ALBUQUERQUE",
+      navaidType: "VHF",
+      class: "VT",
+      classDetail: "HW",
+      classFullRaw: "VTHW",
+      frequency: "11320",
+      coord: [-106.81631111111112, 35.04379444444444],
+      sourceRefs: [{ recordType: "D", lineNumber: 2, entityType: "navaids", entityId: "navaid:D:US:ABQ" }]
+    }],
     airways: [],
     airspaces: [],
     procedures: [],
@@ -25,9 +37,14 @@ test("buildFeaturesFromCanonical emits normalized features", () => {
   const model = buildFeaturesFromCanonical(canonical);
   validateFeatureModel(model);
   assert.equal(model.schema, "arinc-feature-model");
-  assert.equal(model.features.length, 2);
+  assert.equal(model.features.length, 3);
   assert.ok(model.features.some((f) => f.layer === "airports"));
   assert.ok(model.features.some((f) => f.layer === "waypoints"));
+  const navaid = model.features.find((f) => f.layer === "navaids");
+  assert.ok(navaid);
+  assert.equal(navaid.properties.navaidDisplayClass, "vortac");
+  assert.equal(navaid.properties.serviceVolumeClass, "H");
+  assert.equal(navaid.properties.navaidClassRaw, "VTHW");
   assert.equal(model.metadata.generatedAt, null);
 });
 

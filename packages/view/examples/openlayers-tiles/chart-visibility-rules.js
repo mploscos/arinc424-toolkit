@@ -82,7 +82,7 @@ function matchesFocusFix(feature, focus) {
 }
 
 function isProcedureLayer(layer) {
-  return ["procedure", "procedures", "hold", "holds"].includes(layer);
+  return ["procedure", "procedures", "hold", "holds", "procedure-annotations", "procedure-editorial"].includes(layer);
 }
 
 export function isFeatureVisibleInChartMode({
@@ -116,7 +116,7 @@ export function isFeatureVisibleInChartMode({
     const inTerminalLocal = !spatialContext.terminalFocusBBox || bboxIntersects(featureBBox, spatialContext.terminalFocusBBox);
     if (isProcedureLayer(layer)) {
       const meta = deriveProcedureDisplayFromFeature(feature);
-      const selected = procedureState.selected && procedureState.selected !== "all" && meta.key === procedureState.selected;
+      const selected = procedureState.selected && procedureState.selected !== "all" && (meta.familyKey || meta.key) === procedureState.selected;
       return Boolean(selected || procedureState.show);
     }
     if (layer === "airspaces") {
@@ -125,7 +125,7 @@ export function isFeatureVisibleInChartMode({
       if (airspace.category === "fallback" && airspace.importance !== "major") return zoom >= 9;
       return true;
     }
-    if (layer === "airways") return inTerminalFocus && (classifyAirwayTier(feature) === "major" ? zoom >= 7 : zoom >= 9);
+    if (layer === "airways") return inTerminalFocus && zoom >= 10;
     if (layer === "waypoints") return inTerminalLocal && zoom >= 10;
     if (layer === "navaids") return inTerminalLocal && zoom >= 9;
     if (layer === "runways") return inTerminalLocal && zoom >= 10;
@@ -140,7 +140,7 @@ export function isFeatureVisibleInChartMode({
     const inProcedureFocus = !spatialContext.procedureFocusBBox || bboxIntersects(featureBBox, spatialContext.procedureFocusBBox);
     if (isProcedureLayer(layer)) {
       const meta = deriveProcedureDisplayFromFeature(feature);
-      if (focusContext?.selected) return meta.key === focusContext.selectedKey;
+      if (focusContext?.selected) return (meta.familyKey || meta.key) === focusContext.selectedKey;
       return Boolean(procedureState.show);
     }
     if (layer === "airways") return false;

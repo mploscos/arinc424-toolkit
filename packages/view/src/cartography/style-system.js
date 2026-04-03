@@ -110,7 +110,7 @@ function classifyLayer(layerHint) {
   if (key === "airport" || key === "heliport") return "airport";
   if (key === "runway") return "runway";
   if (key === "waypoint" || key === "navaid") return "waypoint";
-  if (key === "procedure" || key === "hold") return "procedure";
+  if (key === "procedure" || key === "hold" || key === "procedure-annotation" || key === "procedure-editorial") return "procedure";
   return "default";
 }
 
@@ -120,13 +120,19 @@ function layerHintOfFeature(featureOrProps) {
 }
 
 export const AIRSPACE_STYLE_PALETTE = Object.freeze({
-  controlledMajor: { stroke: "rgba(58, 101, 168, 0.96)", fill: "rgba(58, 101, 168, 0.055)" },
-  controlledMinor: { stroke: "rgba(96, 128, 176, 0.9)", fill: "rgba(96, 128, 176, 0.032)" },
-  terminalMajor: { stroke: "rgba(39, 132, 150, 0.95)", fill: "rgba(39, 132, 150, 0.05)" },
-  terminalMinor: { stroke: "rgba(77, 147, 160, 0.88)", fill: "rgba(77, 147, 160, 0.03)" },
-  specialUse: { stroke: "rgba(134, 98, 52, 0.96)", fill: "rgba(134, 98, 52, 0.05)" },
-  restrictive: { stroke: "rgba(153, 73, 73, 0.98)", fill: "rgba(153, 73, 73, 0.065)" },
-  fallback: { stroke: "rgba(109, 121, 137, 0.88)", fill: "rgba(109, 121, 137, 0.03)" }
+  classB: { stroke: "rgba(18, 126, 167, 0.98)", fill: "rgba(18, 126, 167, 0.065)", lineDash: null },
+  classC: { stroke: "rgba(48, 142, 104, 0.98)", fill: "rgba(48, 142, 104, 0.058)", lineDash: null },
+  classD: { stroke: "rgba(176, 117, 40, 0.98)", fill: "rgba(176, 117, 40, 0.05)", lineDash: [10, 5] },
+  classE: { stroke: "rgba(118, 96, 164, 0.96)", fill: "rgba(118, 96, 164, 0.038)", lineDash: [4, 4] },
+  terminalMajor: { stroke: "rgba(39, 132, 150, 0.95)", fill: "rgba(39, 132, 150, 0.05)", lineDash: null },
+  terminalMinor: { stroke: "rgba(77, 147, 160, 0.88)", fill: "rgba(77, 147, 160, 0.03)", lineDash: [6, 4] },
+  controlledMajor: { stroke: "rgba(58, 101, 168, 0.96)", fill: "rgba(58, 101, 168, 0.055)", lineDash: null },
+  controlledMinor: { stroke: "rgba(96, 128, 176, 0.9)", fill: "rgba(96, 128, 176, 0.032)", lineDash: [6, 4] },
+  moa: { stroke: "rgba(146, 106, 55, 0.96)", fill: "rgba(146, 106, 55, 0.045)", lineDash: [8, 5] },
+  warning: { stroke: "rgba(157, 84, 62, 0.96)", fill: "rgba(157, 84, 62, 0.04)", lineDash: [3, 5] },
+  restrictive: { stroke: "rgba(153, 73, 73, 0.98)", fill: "rgba(153, 73, 73, 0.065)", lineDash: [6, 4] },
+  danger: { stroke: "rgba(128, 44, 44, 0.98)", fill: "rgba(128, 44, 44, 0.072)", lineDash: [2, 4] },
+  fallback: { stroke: "rgba(109, 121, 137, 0.88)", fill: "rgba(109, 121, 137, 0.03)", lineDash: [5, 5] }
 });
 
 export const AIRWAY_STYLE_PALETTE = Object.freeze({
@@ -136,6 +142,16 @@ export const AIRWAY_STYLE_PALETTE = Object.freeze({
 
 function normalizeTextForMatching(value) {
   return String(value ?? "").trim().toUpperCase();
+}
+
+function navaidSymbolForFeature(featureOrProps) {
+  const props = featureOrProps?.properties ?? featureOrProps ?? {};
+  const displayClass = normalizeTextForMatching(props.navaidDisplayClass);
+  if (displayClass === "VOR") return "vor";
+  if (displayClass === "VOR_DME") return "vor_dme";
+  if (displayClass === "VORTAC") return "vortac";
+  if (displayClass === "NDB") return "ndb";
+  return "navaid";
 }
 
 export function categorizeAirspaceFeatureProperties(featureOrProps) {
@@ -152,27 +168,47 @@ export function categorizeAirspaceFeatureProperties(featureOrProps) {
     "name"
   ]));
 
+  if (/CLASS B|(^|[^A-Z])B($|[^A-Z])/.test(classText)) {
+    return { category: "terminal-controlled", styleClass: "class-b", importance: importance === "unknown" ? "major" : importance };
+  }
+  if (/CLASS C|(^|[^A-Z])C($|[^A-Z])/.test(classText)) {
+    return { category: "terminal-controlled", styleClass: "class-c", importance: importance === "unknown" ? "major" : importance };
+  }
+  if (/CLASS D|(^|[^A-Z])D($|[^A-Z])/.test(classText)) {
+    return { category: "controlled", styleClass: "class-d", importance };
+  }
+  if (/CLASS E|(^|[^A-Z])E($|[^A-Z])/.test(classText)) {
+    return { category: "controlled", styleClass: "class-e", importance };
+  }
   if (
     restrictiveType ||
     /RESTRICT|PROHIB|DANGER/.test(classText)
   ) {
-    return { category: "restrictive", importance };
+    const styleClass = /DANGER/.test(classText) ? "danger" : "restrictive";
+    return { category: "restrictive", styleClass, importance };
   }
-  if (/MOA|WARNING|ALERT|SPECIAL USE/.test(classText)) {
-    return { category: "special-use", importance };
+  if (/WARNING|ALERT/.test(classText)) {
+    return { category: "special-use", styleClass: "warning", importance };
   }
-  if (/CLASS B|(^|[^A-Z])B($|[^A-Z])|CLASS C|(^|[^A-Z])C($|[^A-Z])/.test(classText)) {
-    return { category: "terminal-controlled", importance: importance === "unknown" ? "major" : importance };
+  if (/MOA|SPECIAL USE/.test(classText)) {
+    return { category: "special-use", styleClass: "moa", importance };
   }
-  if (/CLASS D|(^|[^A-Z])D($|[^A-Z])|CLASS E|(^|[^A-Z])E($|[^A-Z])|CTR|TMA|CTA|CONTROL/.test(classText)) {
-    return { category: "controlled", importance };
+  if (/CTR|TMA|CTA|CONTROL/.test(classText)) {
+    return { category: "controlled", styleClass: "controlled", importance };
   }
-  return { category: "fallback", importance };
+  return { category: "fallback", styleClass: "fallback", importance };
 }
 
-function airspacePaletteForCategory(category, importance) {
+function airspacePaletteForCategory(category, styleClass, importance) {
+  if (styleClass === "class-b") return AIRSPACE_STYLE_PALETTE.classB;
+  if (styleClass === "class-c") return AIRSPACE_STYLE_PALETTE.classC;
+  if (styleClass === "class-d") return AIRSPACE_STYLE_PALETTE.classD;
+  if (styleClass === "class-e") return AIRSPACE_STYLE_PALETTE.classE;
+  if (styleClass === "moa") return AIRSPACE_STYLE_PALETTE.moa;
+  if (styleClass === "warning") return AIRSPACE_STYLE_PALETTE.warning;
+  if (styleClass === "danger") return AIRSPACE_STYLE_PALETTE.danger;
   if (category === "restrictive") return AIRSPACE_STYLE_PALETTE.restrictive;
-  if (category === "special-use") return AIRSPACE_STYLE_PALETTE.specialUse;
+  if (category === "special-use") return AIRSPACE_STYLE_PALETTE.moa;
   if (category === "terminal-controlled") {
     return importance === "major" ? AIRSPACE_STYLE_PALETTE.terminalMajor : AIRSPACE_STYLE_PALETTE.terminalMinor;
   }
@@ -231,8 +267,7 @@ export function isFeatureVisibleAtZoom(feature, descriptor, zoom) {
     if (importance === "medium") minZoom = Math.max(minZoom, 6);
     if (importance === "minor") minZoom = Math.max(minZoom, 9);
   } else if (layerClass === "airway") {
-    if (importance === "major") minZoom = Math.max(5, minZoom - 1);
-    if (importance === "minor") minZoom = Math.max(minZoom, 9);
+    minZoom = Math.max(minZoom, 10);
   } else if (layerClass === "waypoint") {
     minZoom = Math.max(minZoom, 10);
     if (importance === "major") minZoom = Math.max(9, minZoom - 1);
@@ -247,14 +282,19 @@ export function isFeatureVisibleAtZoom(feature, descriptor, zoom) {
 }
 
 export function getAirspaceStyle(feature, zoom) {
-  const { category, importance } = categorizeAirspaceFeatureProperties(feature);
+  const { category, styleClass, importance } = categorizeAirspaceFeatureProperties(feature);
   const large = importance === "major";
-  const palette = airspacePaletteForCategory(category, importance);
-  const borderWidth = zoom >= 11 ? (large ? 1.85 : 1.45) : (large ? 1.55 : 1.15);
+  const palette = airspacePaletteForCategory(category, styleClass, importance);
+  const widthBoost = styleClass === "class-b"
+    ? 0.45
+    : (styleClass === "class-c" ? 0.3 : (styleClass === "danger" ? 0.25 : 0));
+  const borderWidth = zoom >= 11
+    ? (large ? 1.85 + widthBoost : 1.45 + widthBoost)
+    : (large ? 1.55 + widthBoost : 1.15 + widthBoost);
   return {
     stroke: palette.stroke,
     fill: zoom >= 10 ? palette.fill : withAlpha(palette.fill, large ? 0.04 : 0.024),
-    lineDash: category === "restrictive" ? [6, 4] : (category === "special-use" ? [4, 4] : null),
+    lineDash: palette.lineDash,
     width: borderWidth
   };
 }
@@ -291,7 +331,7 @@ export function getWaypointStyle(feature, zoom) {
   const usage = normalizeTextForMatching(props.usage);
   const compulsory = usage === "B";
   return {
-    symbol: isNavaid ? "navaid" : (compulsory ? "waypoint-compulsory" : "waypoint"),
+    symbol: isNavaid ? navaidSymbolForFeature(feature) : (compulsory ? "waypoint-compulsory" : "waypoint"),
     radius: zoom >= 13 ? (major ? 3.1 : 2.5) : (major ? 2.6 : 2.1),
     fill: isNavaid ? "#4f5c90" : (compulsory ? "#436f8b" : "#597b6e"),
     stroke: "#ffffff",
@@ -309,9 +349,26 @@ export function getRunwayStyle(_feature, zoom) {
 export function getProcedureStyle(_feature, zoom) {
   const kind = procedureKind(_feature);
   const layerHint = layerHintOfFeature(_feature);
+  const props = _feature?.properties ?? {};
+  const isAnnotation = layerHint === "procedure-annotation";
   const isApproach = kind === "approach";
-  const isHold = layerHint === "hold" || layerHint === "holds";
-  const legType = String(_feature?.properties?.legType ?? "").toUpperCase();
+  const depictionClass = String(props.depictionClass ?? "").trim().toLowerCase();
+  const isHold = layerHint === "hold" || layerHint === "holds" || depictionClass === "hold";
+  const isOpenLeg = depictionClass === "open-leg";
+  const isChartPoint = depictionClass === "chart-point";
+  const chartObjectClass = String(props.chartObjectClass ?? "").trim().toLowerCase();
+  const approximationLevel = String(props.approximationLevel ?? "").trim().toLowerCase();
+  if (isAnnotation) {
+    return {
+      stroke: "rgba(0, 0, 0, 0)",
+      casing: "rgba(0, 0, 0, 0)",
+      casingWidth: 0,
+      width: 0,
+      lineDash: null,
+      pointFill: chartObjectClass === "hold-racetrack" ? "rgba(88, 112, 48, 0.96)" : "rgba(120, 90, 42, 0.92)",
+      pointRadius: zoom >= 13 ? 2.8 : 2.2
+    };
+  }
   const palette = isHold
     ? { stroke: "rgba(88, 112, 48, 0.96)", casing: "rgba(255, 255, 255, 0.72)", lineDash: [6, 5] }
     : kind === "approach"
@@ -319,14 +376,17 @@ export function getProcedureStyle(_feature, zoom) {
       : kind === "star"
         ? { stroke: "rgba(43, 118, 157, 0.94)", casing: "rgba(255, 255, 255, 0.75)", lineDash: [10, 6] }
         : { stroke: "rgba(150, 97, 45, 0.96)", casing: "rgba(255, 255, 255, 0.74)", lineDash: null };
+  const lineDash = isOpenLeg
+    ? [8, 5]
+    : (approximationLevel === "approximate" ? [10, 5] : palette.lineDash);
   return {
     stroke: palette.stroke,
     casing: palette.casing,
-    casingWidth: zoom >= 14 ? (isHold ? 2.2 : 2.8) : (isHold ? 1.9 : 2.35),
-    width: zoom >= 14 ? (isHold ? 1.7 : (isApproach ? 2.4 : 2)) : (isHold ? 1.45 : (isApproach ? 2.1 : 1.7)),
-    lineDash: palette.lineDash,
+    casingWidth: zoom >= 14 ? (isHold ? 2.4 : 2.8) : (isHold ? 2.05 : 2.35),
+    width: zoom >= 14 ? (isHold ? 1.85 : (isApproach ? 2.4 : 2)) : (isHold ? 1.6 : (isApproach ? 2.1 : 1.7)),
+    lineDash,
     pointFill: palette.stroke,
-    pointRadius: legType === "IF" ? (zoom >= 13 ? 3.4 : 2.8) : 0
+    pointRadius: isChartPoint ? (zoom >= 13 ? 3.6 : 3) : 0
   };
 }
 
